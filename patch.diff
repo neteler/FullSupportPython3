@@ -1,0 +1,42 @@
+Index: lib/python/script/testsuite/test_utils.py
+===================================================================
+--- lib/python/script/testsuite/test_utils.py	(revision 72696)
++++ lib/python/script/testsuite/test_utils.py	(working copy)
+@@ -41,7 +41,7 @@
+ 
+     def test_bytes_grabage_in_out(self):
+         """If the input is bytes we should not touch it for encoding"""
+-        self.assertEqual(b'Příšerný kůň', utils.encode(b'Příšerný kůň'))
++        self.assertEqual(b'P\xc5\x99\xc3\xad\xc5\xa1ern\xc3\xbd k\xc5\xaf\xc5\x88', utils.encode(b'P\xc5\x99\xc3\xad\xc5\xa1ern\xc3\xbd k\xc5\xaf\xc5\x88'))
+ 
+     def test_int(self):
+         """If the input is an integer return bytes"""
+Index: lib/python/script/utils.py
+===================================================================
+--- lib/python/script/utils.py	(revision 72696)
++++ lib/python/script/utils.py	(working copy)
+@@ -185,7 +185,10 @@
+     if isinstance(bytes_, bytes):
+         enc = _get_encoding()
+         return bytes_.decode(enc)
+-    return unicode(bytes_)
++    if sys.version_info.major == 3:
++        return str(bytes_)
++    else:
++        return unicode(bytes_)
+ 
+ 
+ def encode(string):
+@@ -211,7 +214,11 @@
+     if isinstance(string, unicode):
+         enc = _get_encoding()
+         return string.encode(enc)
+-    return bytes(string)
++    if sys.version_info.major == 3:
++        enc = _get_encoding()
++        return bytes(str(string), encoding=enc)
++    else:
++        return bytes(string)
+ 
+ 
+ def parse_key_val(s, sep='=', dflt=None, val_type=None, vsep=None):
