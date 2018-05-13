@@ -40,3 +40,16 @@ Index: lib/python/script/utils.py
  
  
  def parse_key_val(s, sep='=', dflt=None, val_type=None, vsep=None):
+ Index: lib/python/script/testsuite/test_start_command_functions.py
+===================================================================
+--- lib/python/script/testsuite/test_start_command_functions.py	(revision 72704)
++++ lib/python/script/testsuite/test_start_command_functions.py	(working copy)
+@@ -56,7 +56,7 @@
+ 
+     def test_python_module_czech_nonascii(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
+-        run_command('g.search.modules', keyword=b'Příšerný kůň')
++        run_command('g.search.modules', keyword='Příšerný kůň')
+ 
+     def test_python_module_czech_unicode(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
