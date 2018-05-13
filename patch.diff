@@ -1,6 +1,6 @@
 Index: lib/python/script/testsuite/test_utils.py
 ===================================================================
---- lib/python/script/testsuite/test_utils.py	(revision 72696)
+--- lib/python/script/testsuite/test_utils.py	(revision 72704)
 +++ lib/python/script/testsuite/test_utils.py	(working copy)
 @@ -41,7 +41,7 @@
  
@@ -13,7 +13,7 @@ Index: lib/python/script/testsuite/test_utils.py
          """If the input is an integer return bytes"""
 Index: lib/python/script/utils.py
 ===================================================================
---- lib/python/script/utils.py	(revision 72696)
+--- lib/python/script/utils.py	(revision 72704)
 +++ lib/python/script/utils.py	(working copy)
 @@ -185,7 +185,10 @@
      if isinstance(bytes_, bytes):
