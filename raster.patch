@@ -1,0 +1,22 @@
+Index: lib/python/script/raster.py
+===================================================================
+--- lib/python/script/raster.py	(revision 72704)
++++ lib/python/script/raster.py	(working copy)
+@@ -26,7 +26,7 @@
+ 
+ from .core import *
+ from grass.exceptions import CalledModuleError
+-from .utils import float_or_dms, parse_key_val
++from .utils import float_or_dms, parse_key_val, decode
+ 
+ 
+ if sys.version_info.major == 3:
+@@ -198,7 +198,7 @@
+     else:
+         labels = ('value', 'label', 'color')
+     for item in ret.splitlines():
+-        line = item.split(sep)[3:]
++        line = decode(item).split(sep)[3:]
+         for i, map_name in enumerate(map_list):
+             tmp_dict = {}
+             tmp_dict[map_name] = {}
