@@ -1,0 +1,370 @@
+Index: lib/python/script/core.py
+===================================================================
+--- lib/python/script/core.py	(revision 72736)
++++ lib/python/script/core.py	(working copy)
+@@ -25,9 +25,8 @@
+ import subprocess
+ import shutil
+ import codecs
+-import types as python_types
+ 
+-from .utils import KeyValue, parse_key_val, basename, encode
++from .utils import KeyValue, parse_key_val, basename, encode, decode
+ from grass.exceptions import ScriptError, CalledModuleError
+ 
+ # i18N
+@@ -105,7 +104,20 @@
+         pass
+     return bytes(val)
+ 
++def _make_unicode(val, enc):
++    """Convert value to unicode with given encoding
+ 
++    :param val: value to be converted
++    :param enc: encoding to be used
++    """
++    if val is None or enc is None:
++        return val
++    else:
++        if enc == 'default':       
++            return decode(val)
++        else:
++            return decode(val,encoding=enc)
++
+ def get_commands():
+     """Create list of available GRASS commands to use when parsing
+     string from the command line
+@@ -301,6 +313,7 @@
+             continue
+         # convert string to bytes
+         opt = encode(opt)
++        prog = encode(prog)
+         if val != None:
+             if opt.startswith(b'_'):
+                 opt = opt[1:]
+@@ -360,6 +373,9 @@
+ 
+     :return: Popen object
+     """
++    if 'encoding' in kwargs.keys():
++        encoding = kwargs.pop('encoding')
++        
+     options = {}
+     popts = {}
+     for opt, val in kwargs.items():
+@@ -379,7 +395,6 @@
+         sys.stderr.flush()
+     return Popen(args, **popts)
+ 
+-
+ def run_command(*args, **kwargs):
+     """Execute a module synchronously
+ 
+@@ -408,11 +423,18 @@
+ 
+     :raises: ``CalledModuleError`` when module returns non-zero return code
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
++
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     ps = start_command(*args, **kwargs)
+     if _capture_stderr:
+         stdout, stderr = ps.communicate()
++        if encoding is not None:
++            stdout = _make_unicode(stdout, encoding)
++            stderr = _make_unicode(stderr, encoding)
+         returncode = ps.poll()
+         if returncode:
+             sys.stderr.write(stderr)
+@@ -466,10 +488,17 @@
+ 
+     :return: stdout
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
++
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     process = pipe_command(*args, **kwargs)
+     stdout, stderr = process.communicate()
++    if encoding is not None:
++        stdout = _make_unicode(stdout, encoding)
++        stderr = _make_unicode(stderr, encoding)
+     returncode = process.poll()
+     if _capture_stderr and returncode:
+         sys.stderr.write(stderr)
+@@ -539,12 +568,22 @@
+ 
+     :raises: ``CalledModuleError`` when module returns non-zero return code
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
+     # TODO: should we delete it from kwargs?
+     stdin = kwargs['stdin']
++    if encoding is None or encoding == 'default':
++        stdin = encode(stdin)
++    else:
++        stdin = encode(stdin,encoding=encoding)
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     process = feed_command(*args, **kwargs)
+     unused, stderr = process.communicate(stdin)
++    if encoding is not None:
++        unused = _make_unicode(unused, encoding)
++        stderr = _make_unicode(stderr, encoding)
+     returncode = process.poll()
+     if _capture_stderr and returncode:
+         sys.stderr.write(stderr)
+@@ -789,6 +828,7 @@
+     prog = "g.parser.exe" if sys.platform == "win32" else "g.parser"
+     p = subprocess.Popen([prog, '-n'] + argv, stdout=subprocess.PIPE)
+     s = p.communicate()[0]
++    s = decode(s)
+     lines = s.split(b'\0')
+ 
+     if not lines or lines[0] != b"@ARGS_PARSED@":
+@@ -1270,7 +1310,7 @@
+ 
+     :return: directory of mapsets/elements
+     """
+-    if isinstance(type, python_types.StringTypes) or len(type) == 1:
++    if isinstance(type, str) or len(type) == 1:
+         types = [type]
+         store_types = False
+     else:
+Index: lib/python/script/testsuite/test_start_command_functions.py
+===================================================================
+--- lib/python/script/testsuite/test_start_command_functions.py	(revision 72736)
++++ lib/python/script/testsuite/test_start_command_functions.py	(working copy)
+@@ -2,12 +2,13 @@
+ # the utf-8 is important because we do use the characters
+ """Tests of start_command function family (location independent)"""
+ 
++import sys
+ from grass.gunittest.case import TestCase
+ from grass.gunittest.main import test
+ 
+-from grass.script.core import start_command, PIPE, run_command
++from grass.script.core import start_command, PIPE, run_command, write_command, read_command, find_program
++from grass.script.utils import encode
+ 
+-
+ class TestPythonKeywordsInParameters(TestCase):
+     """Tests additional underscore syntax which helps to avoid Python keywords
+ 
+@@ -52,16 +53,52 @@
+ 
+     def test_python_module_ascii(self):
+         """This tests if Python module works"""
+-        run_command('g.search.modules', keyword=b'Priserny kun')
++        run_command('g.search.modules', keyword='Priserny kun', encoding=None)
+ 
++    def test_python_module_ascii_with_encoding(self):
++        """This tests if Python module works with user-specified encoding"""
++        run_command('g.search.modules', keyword='Priserny kun', encoding='utf-16')
++
+     def test_python_module_czech_nonascii(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
+-        run_command('g.search.modules', keyword=b'Příšerný kůň')
++        run_command('g.search.modules', keyword='Příšerný kůň')
+ 
+     def test_python_module_czech_unicode(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
+         run_command('g.search.modules', keyword=u'Příšerný kůň')
+ 
++class TestPythonModuleWithStdinStdout(TestCase):
++    raster = 'rand_raster'
+ 
++    @classmethod
++    def setUpClass(cls):
++        cls.runModule('g.region', s=0, n=10, w=0, e=10, res=1)
++        cls.runModule("r.mapcalc", expression="{} = rand(1, 5)".format(cls.raster), seed=1,
++                      overwrite=True)
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.runModule("g.remove", type='raster', name=cls.raster,
++                      flags='f')
++
++    def test_write_labels_unicode(self):
++        """This tests if Python module works"""
++        find_program('ls', '--version')
++        write_command('r.category', map=self.raster, rules='-', stdin='1:kůň\n2:kráva\n3:ovečka\n4:býk', separator=':')
++        res = read_command('r.category', map=self.raster, separator=':').strip()
++        self.assertEquals(res, u'1:kůň\n2:kráva\n3:ovečka\n4:býk')
++        if sys.version_info.major >= 3:
++            self.assertIsInstance(res, str)
++        else:
++            self.assertIsInstance(res, unicode)
++
++    def test_write_labels_bytes(self):
++        """This tests if Python module works"""
++        write_command('r.category', map=self.raster, rules='-', stdin='1:kůň\n2:kráva\n3:ovečka\n4:býk',
++                      separator=':', encoding=None)
++        res = read_command('r.category', map=self.raster, separator=':', encoding=None).strip()
++        self.assertEquals(res, encode('1:kůň\n2:kráva\n3:ovečka\n4:býk'))
++        self.assertIsInstance(res, bytes)
++
+ if __name__ == '__main__':
+     test()
+Index: lib/python/script/testsuite/test_utils.py
+===================================================================
+--- lib/python/script/testsuite/test_utils.py	(revision 72736)
++++ lib/python/script/testsuite/test_utils.py	(working copy)
+@@ -1,5 +1,6 @@
+ # -*- coding: utf-8 -*-
+ import os
++import sys
+ 
+ from grass.gunittest.case import TestCase
+ from grass.gunittest.main import test
+@@ -39,25 +40,35 @@
+     def test_unicode(self):
+         self.assertEqual(b'text', utils.encode(u'text'))
+ 
+-    def test_bytes_grabage_in_out(self):
++    def test_bytes_garbage_in_out(self):
+         """If the input is bytes we should not touch it for encoding"""
+-        self.assertEqual(b'Příšerný kůň', utils.encode(b'Příšerný kůň'))
++        self.assertEqual(b'P\xc5\x99\xc3\xad\xc5\xa1ern\xc3\xbd k\xc5\xaf\xc5\x88',
++                         utils.encode('Příšerný kůň'))
+ 
+     def test_int(self):
+         """If the input is an integer return bytes"""
+-        self.assertEqual(b'1234567890', utils.encode(1234567890))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, 1234567890)
++        else:
++            self.assertEqual('1234567890', utils.encode(1234567890))
+ 
+     def test_float(self):
+         """If the input is a float return bytes"""
+-        self.assertEqual(b'12345.6789', utils.encode(12345.6789))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, 12345.6789)
++        else:
++            self.assertEqual('12345.6789', utils.encode(12345.6789))
+ 
+     def test_none(self):
+         """If the input is a boolean return bytes"""
+-        self.assertEqual(b'None', utils.encode(None))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, None)
++        else:
++            self.assertEqual('None', utils.encode(None))
+ 
+ 
+ class TestDecode(TestCase):
+-    """Tests function `encode` that convert value to unicode."""
++    """Tests function `decode` that converts value to unicode."""
+ 
+     def test_bytes(self):
+         self.assertEqual(u'text', utils.decode(b'text'))
+@@ -67,15 +78,24 @@
+ 
+     def test_int(self):
+         """If the input is an integer return bytes"""
+-        self.assertEqual(u'1234567890', utils.decode(1234567890))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, 1234567890)
++        else:
++            self.assertEqual(u'1234567890', utils.decode(1234567890))
+ 
+     def test_float(self):
+         """If the input is a float return bytes"""
+-        self.assertEqual(u'12345.6789', utils.decode(12345.6789))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, 12345.6789)
++        else:
++            self.assertEqual(u'12345.6789', utils.decode(12345.6789))
+ 
+     def test_none(self):
+         """If the input is a boolean return bytes"""
+-        self.assertEqual(u'None', utils.decode(None))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, None)
++        else:
++            self.assertEqual(u'None', utils.decode(None))
+ 
+ 
+ class TestEncodeLcAllC(TestEncode, LcAllC):
+Index: lib/python/script/utils.py
+===================================================================
+--- lib/python/script/utils.py	(revision 72736)
++++ lib/python/script/utils.py	(working copy)
+@@ -163,12 +163,13 @@
+     return encoding
+ 
+ 
+-def decode(bytes_):
++def decode(bytes_, encoding=None):
+     """Decode bytes with default locale and return (unicode) string
+ 
+     No-op if parameter is not bytes (assumed unicode string).
+ 
+     :param bytes bytes_: the bytes to decode
++    :param encoding: encoding to be used, default value is None
+ 
+     Example
+     -------
+@@ -183,12 +184,21 @@
+     if isinstance(bytes_, unicode):
+         return bytes_
+     if isinstance(bytes_, bytes):
+-        enc = _get_encoding()
++        if encoding is None:
++            enc = _get_encoding()
++        else:
++            enc = encoding
+         return bytes_.decode(enc)
+-    return unicode(bytes_)
++    # if something else than text
++    if sys.version_info.major >= 3:
++        # only text should be used
++        raise TypeError("can only accept types str and bytes")
++    else:
++        # for backwards compatibility
++        return unicode(bytes_)
+ 
+ 
+-def encode(string):
++def encode(string, encoding=None):
+     """Encode string with default locale and return bytes with that encoding
+ 
+     No-op if parameter is bytes (assumed already encoded).
+@@ -195,6 +205,7 @@
+     This ensures garbage in, garbage out.
+ 
+     :param str string: the string to encode
++    :param encoding: encoding to be used, default value is None
+ 
+     Example
+     -------
+@@ -208,10 +219,20 @@
+     """
+     if isinstance(string, bytes):
+         return string
++    # this also tests str in Py3:
+     if isinstance(string, unicode):
+-        enc = _get_encoding()
++        if encoding is None:
++            enc = _get_encoding()
++        else:
++            enc = encoding
+         return string.encode(enc)
+-    return bytes(string)
++    # if something else than text
++    if sys.version_info.major >= 3:
++        # only text should be used
++        raise TypeError("can only accept types str and bytes")
++    else:
++        # for backwards compatibility
++        return bytes(string)
+ 
+ 
+ def parse_key_val(s, sep='=', dflt=None, val_type=None, vsep=None):
