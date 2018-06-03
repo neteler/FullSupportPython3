@@ -1,0 +1,693 @@
+Index: scripts/db.in.ogr/db.in.ogr.py
+===================================================================
+--- scripts/db.in.ogr/db.in.ogr.py	(revision 72759)
++++ scripts/db.in.ogr/db.in.ogr.py	(working copy)
+@@ -85,8 +85,9 @@
+ 
+     # check if table exists
+     try:
+-        nuldev = file(os.devnull, 'w+')
+-        s = grass.read_command('db.tables', flags='p', quiet=True, stderr=nuldev)
++        nuldev = open(os.devnull, 'w+')
++        s = grass.read_command('db.tables', flags='p',
++                               quiet=True, stderr=nuldev)
+         nuldev.close()
+     except CalledModuleError:
+         # check connection parameters, set if uninitialized
+@@ -142,7 +143,7 @@
+                           name=output)
+ 
+     # get rid of superfluous auto-added cat column (and cat_ if present)
+-    nuldev = file(os.devnull, 'w+')
++    nuldev = open(os.devnull, 'w+')
+     grass.run_command('db.dropcolumn', quiet=True, flags='f', table=output,
+                       column='cat', stdout=nuldev, stderr=nuldev)
+     nuldev.close()
+Index: scripts/db.test/db.test.py
+===================================================================
+--- scripts/db.test/db.test.py	(revision 72759)
++++ scripts/db.test/db.test.py	(working copy)
+@@ -48,7 +48,7 @@
+     gcore.message(_("Using DB driver: %s") % dbconn['driver'])
+ 
+     infile = os.path.join(os.environ['GISBASE'], 'etc', 'db.test', test_file)
+-    inf = file(infile)
++    inf = open(infile)
+ 
+     while True:
+         type = inf.readline()
+@@ -64,7 +64,7 @@
+             if type == 'X':
+                 gcore.write_command('db.execute', input='-', stdin=sql + '\n')
+             else:
+-                resf = file(result, 'w')
++                resf = open(result, 'w')
+                 gcore.write_command('db.select', input='-', flags='c',
+                                     stdin=sql + '\n', stdout=resf)
+                 resf.close()
+@@ -74,7 +74,7 @@
+         else:
+             gcore.message(_("EXECUTE: OK"))
+ 
+-        expf = file(expected, 'w')
++        expf = open(expected, 'w')
+         while True:
+             res = inf.readline().rstrip('\r\n')
+             if not res:
+Index: scripts/db.univar/db.univar.py
+===================================================================
+--- scripts/db.univar/db.univar.py	(revision 72759)
++++ scripts/db.univar/db.univar.py	(working copy)
+@@ -73,8 +73,8 @@
+ 
+ 
+ def sortfile(infile, outfile):
+-    inf = file(infile, 'r')
+-    outf = file(outfile, 'w')
++    inf = open(infile, 'r')
++    outf = open(outfile, 'w')
+ 
+     if gscript.find_program('sort', '--help'):
+         gscript.run_command('sort', flags='n', stdin=inf, stdout=outf)
+@@ -134,7 +134,7 @@
+     if not driver:
+         driver = None
+ 
+-    tmpf = file(tmp, 'w')
++    tmpf = open(tmp, 'w')
+     gscript.run_command('db.select', flags='c', table=table,
+                         database=database, driver=driver, sql=sql,
+                         stdout=tmpf)
+@@ -141,7 +141,7 @@
+     tmpf.close()
+ 
+     # check if result is empty
+-    tmpf = file(tmp)
++    tmpf = open(tmp)
+     if tmpf.read(1) == '':
+         gscript.fatal(_("Table <%s> contains no data.") % table)
+         tmpf.close()
+@@ -157,7 +157,7 @@
+     minv = 1e300
+     maxv = -1e300
+ 
+-    tmpf = file(tmp)
++    tmpf = open(tmp)
+     for line in tmpf:
+         if len(line.rstrip('\r\n')) == 0:
+             continue
+@@ -237,7 +237,7 @@
+             ppos[i] = 1
+         pval[i] = 0
+ 
+-    inf = file(tmp + ".sort")
++    inf = open(tmp + ".sort")
+     l = 1
+     for line in inf:
+         if l == q25pos:
+Index: scripts/g.extension/g.extension.py
+===================================================================
+--- scripts/g.extension/g.extension.py	(revision 72759)
++++ scripts/g.extension/g.extension.py	(working copy)
+@@ -564,7 +564,7 @@
+         grass.warning(_("Unable to fetch '%s'") % url)
+         return
+ 
+-    for line in file.readlines():
++    for line in open.readlines():
+         # list extensions
+         sline = pattern.search(line)
+         if not sline:
+@@ -1030,6 +1030,7 @@
+         for name in files:
+             filename = os.path.join(root, name)
+             data = open(filename, 'rb').read()
++            data = grass.decode(data)
+             if '\0' in data:
+                 continue  # ignore binary files
+             # we don't expect there would be CRLF file by purpose
+@@ -1037,6 +1038,7 @@
+             newdata = data.replace('\r\n', '\n')
+             if newdata != data:
+                 newfile = open(filename, 'wb')
++                newdata = grass.encode(newdata)
+                 newfile.write(newdata)
+                 newfile.close()
+ 
+Index: scripts/i.in.spotvgt/i.in.spotvgt.py
+===================================================================
+--- scripts/i.in.spotvgt/i.in.spotvgt.py	(revision 72759)
++++ scripts/i.in.spotvgt/i.in.spotvgt.py	(working copy)
+@@ -77,7 +77,7 @@
+ 
+ 
+ def create_VRT_file(projfile, vrtfile, infile):
+-    fh = file(projfile)
++    fh = open(projfile)
+     kv = {}
+     for l in fh:
+         f = l.rstrip('\r\n').split()
+@@ -104,7 +104,7 @@
+     s = t.substitute(NORTHCORNER=north_corner, WESTCORNER=west_corner,
+                      XSIZE=xsize, YSIZE=ysize, RESOLUTION=map_proj_res,
+                      FILENAME=infile)
+-    outf = file(vrtfile, 'w')
++    outf = open(vrtfile, 'w')
+     outf.write(s)
+     outf.close()
+ 
+Index: scripts/i.oif/i.oif.py
+===================================================================
+--- scripts/i.oif/i.oif.py	(revision 72759)
++++ scripts/i.oif/i.oif.py	(working copy)
+@@ -156,7 +156,7 @@
+         for v, p in oif:
+             sys.stdout.write(fmt % (p + (v,)))
+     else:
+-        outf = file(output, 'w')
++        outf = open(output, 'w')
+         for v, p in oif:
+             outf.write(fmt % (p + (v,)))
+         outf.close()
+Index: scripts/i.pansharpen/i.pansharpen.py
+===================================================================
+--- scripts/i.pansharpen/i.pansharpen.py	(revision 72759)
++++ scripts/i.pansharpen/i.pansharpen.py	(working copy)
+@@ -89,6 +89,7 @@
+     hasNumPy = False
+ 
+ import grass.script as grass
++from grass.script.core import decode
+ 
+ # i18N
+ import gettext
+@@ -373,7 +374,7 @@
+         # calculate number of cells for each grey value for for each image
+         stats_out = grass.pipe_command('r.stats', flags='cin', input=i,
+                                        sep=':')
+-        stats = stats_out.communicate()[0].split('\n')[:-1]
++        stats = decode(stats_out.communicate()[0]).split('\n')[:-1]
+         stats_dict = dict(s.split(':', 1) for s in stats)
+         total_cells = 0  # total non-null cells
+         for j in stats_dict:
+Index: scripts/i.tasscap/i.tasscap.py
+===================================================================
+--- scripts/i.tasscap/i.tasscap.py	(revision 72759)
++++ scripts/i.tasscap/i.tasscap.py	(working copy)
+@@ -165,7 +165,7 @@
+     for i, band in enumerate(inputs):
+         band_num = i + 1
+         bands['in' + str(band_num) + 'band'] = band
+-    grass.debug(1, bands)
++    grass.debug(bands, 1)
+ 
+     # core tasseled cap components computation
+     calcN(output_basename, bands, satellite)
+Index: scripts/m.proj/m.proj.py
+===================================================================
+--- scripts/m.proj/m.proj.py	(revision 72759)
++++ scripts/m.proj/m.proj.py	(working copy)
+@@ -117,6 +117,7 @@
+             if not line:
+                 break
+             line = line.replace(self.ifs, ' ')
++            line = gcore.encode(line)
+             self.outf.write(line)
+             self.outf.flush()
+ 
+@@ -231,7 +232,7 @@
+         fd = open(tmpfile, "w")
+         fd.write("%s%s%s\n" % (x, ifs, y))
+         fd.close()
+-        inf = file(tmpfile)
++        inf = open(tmpfile)
+     else:
+         if input == '-':
+             infile = None
+@@ -240,7 +241,7 @@
+             infile = input
+             if not os.path.exists(infile):
+                 gcore.fatal(_("Unable to read input data"))
+-            inf = file(infile)
++            inf = open(infile)
+             gcore.debug("input file=[%s]" % infile)
+ 
+     # set up output file
+@@ -279,6 +280,7 @@
+             outf.write("x%sy%sz\n" % (ofs, ofs))
+         for line in p.stdout:
+             try:
++                line = gcore.decode(line)
+                 xy, z = line.split(' ', 1)
+                 x, y = xy.split('\t')
+             except ValueError:
+@@ -290,6 +292,7 @@
+         if include_header:
+             outf.write("input_x%sinput_y%sx%sy%sz\n" % (ofs, ofs, ofs, ofs))
+         for line in p.stdout:
++            line = gcore.decode(line)
+             inXYZ, x, rest = line.split('\t')
+             inX, inY = inXYZ.split(' ')[:2]
+             y, z = rest.split(' ', 1)
+Index: scripts/r.buffer.lowmem/r.buffer.lowmem.py
+===================================================================
+--- scripts/r.buffer.lowmem/r.buffer.lowmem.py	(revision 72759)
++++ scripts/r.buffer.lowmem/r.buffer.lowmem.py	(working copy)
+@@ -124,10 +124,12 @@
+ 
+     p = grass.feed_command('r.category', map=output,
+                            separator=':', rules='-')
+-    p.stdin.write("1:distances calculated from these locations\n")
++    msg = "1:distances calculated from these locations\n"
++    p.stdin.write(grass.core.encode(msg))
+     d0 = "0"
+     for n, d in enumerate(distances):
+-        p.stdin.write("%d:%s-%s %s\n" % (n + 2, d0, d, units))
++        msg = "%d:%s-%s %s\n" % (n + 2, d0, d, units)
++        p.stdin.write(grass.core.encode(msg))
+         d0 = d
+     p.stdin.close()
+     p.wait()
+Index: scripts/r.fillnulls/r.fillnulls.py
+===================================================================
+--- scripts/r.fillnulls/r.fillnulls.py	(revision 72759)
++++ scripts/r.fillnulls/r.fillnulls.py	(working copy)
+@@ -246,7 +246,7 @@
+             file=cats_file_name,
+             quiet=quiet)
+         cat_list = list()
+-        cats_file = file(cats_file_name)
++        cats_file = open(cats_file_name)
+         for line in cats_file:
+             cat_list.append(line.rstrip('\n'))
+         cats_file.close()
+Index: scripts/r.grow/r.grow.py
+===================================================================
+--- scripts/r.grow/r.grow.py	(revision 72759)
++++ scripts/r.grow/r.grow.py	(working copy)
+@@ -64,7 +64,6 @@
+ import os
+ import atexit
+ import math
+-from string import split
+ import grass.script as grass
+ from grass.exceptions import CalledModuleError
+ 
+@@ -124,7 +123,7 @@
+ 
+     # Workaround for r.mapcalc bug #3475
+     # Mapcalc will fail if output is a fully qualified map name
+-    out_name = split(options['output'], '@')
++    out_name = options['output'].split('@')
+     if len(out_name) == 2:
+         if out_name[1] != grass.gisenv()['MAPSET']:
+             grass.fatal(_("Output can be written only to the current mapset"))
+Index: scripts/r.in.srtm/r.in.srtm.py
+===================================================================
+--- scripts/r.in.srtm/r.in.srtm.py	(revision 72759)
++++ scripts/r.in.srtm/r.in.srtm.py	(working copy)
+@@ -262,13 +262,13 @@
+ 
+     header = tmpl % (ulxmap, ulymap)
+     hdrfile = tile + '.hdr'
+-    outf = file(hdrfile, 'w')
++    outf = open(hdrfile, 'w')
+     outf.write(header)
+     outf.close()
+ 
+     # create prj file: To be precise, we would need EGS96! But who really cares...
+     prjfile = tile + '.prj'
+-    outf = file(prjfile, 'w')
++    outf = open(prjfile, 'w')
+     outf.write(proj)
+     outf.close()
+ 
+Index: scripts/r.in.wms/wms_base.py
+===================================================================
+--- scripts/r.in.wms/wms_base.py	(revision 72759)
++++ scripts/r.in.wms/wms_base.py	(working copy)
+@@ -383,7 +383,7 @@
+             self.temp_warpmap = grass.tempfile()
+ 
+             if int(os.getenv('GRASS_VERBOSE', '2')) <= 2:
+-                nuldev = file(os.devnull, 'w+')
++                nuldev = open(os.devnull, 'w+')
+             else:
+                 nuldev = None
+ 
+Index: scripts/r.mask/r.mask.py
+===================================================================
+--- scripts/r.mask/r.mask.py	(revision 72759)
++++ scripts/r.mask/r.mask.py	(working copy)
+@@ -71,6 +71,7 @@
+ import atexit
+ 
+ import grass.script as grass
++import grass.script.core as gcore
+ from grass.exceptions import CalledModuleError
+ 
+ # i18N
+@@ -141,7 +142,8 @@
+                 output='MASK',
+                 overwrite=True,
+                 rules='-')
+-            p.stdin.write("%s = 1" % maskcats)
++            res = "%s = 1" % maskcats
++            p.stdin.write(gcore.encode(res))
+             p.stdin.close()
+             p.wait()
+         elif vector:
+Index: scripts/r.reclass.area/r.reclass.area.py
+===================================================================
+--- scripts/r.reclass.area/r.reclass.area.py	(revision 72759)
++++ scripts/r.reclass.area/r.reclass.area.py	(working copy)
+@@ -76,6 +76,7 @@
+ import os
+ import atexit
+ import grass.script as grass
++import grass.script.core as gcore
+ 
+ # i18N
+ import gettext
+@@ -142,7 +143,7 @@
+                             rules='-')
+     rules = ''
+     for line in p1.stdout:
+-        f = line.rstrip(os.linesep).split(';')
++        f = gcore.decode(line).rstrip(os.linesep).split(';')
+         if len(f) < 5:
+             continue
+         hectares = float(f[4]) * 0.0001
+@@ -153,7 +154,7 @@
+         if test:
+             rules += "%s = %s %s\n" % (f[0], f[2], f[3])
+     if rules:
+-        p2.stdin.write(rules)
++        p2.stdin.write(gcore.encode(rules))
+     p1.wait()
+     p2.stdin.close()
+     p2.wait()
+Index: scripts/v.db.addcolumn/v.db.addcolumn.py
+===================================================================
+--- scripts/v.db.addcolumn/v.db.addcolumn.py	(revision 72759)
++++ scripts/v.db.addcolumn/v.db.addcolumn.py	(working copy)
+@@ -43,6 +43,7 @@
+ import sys
+ import os
+ import grass.script as grass
++import grass.script.core as gcore
+ 
+ # i18N
+ import gettext
+@@ -81,9 +82,11 @@
+             grass.error(_("Column <%s> is already in the table. Skipping.") % col_name)
+             continue
+         grass.verbose(_("Adding column <%s> to the table") % col_name)
+-        p = grass.feed_command('db.execute', input='-', database=database, driver=driver)
+-        p.stdin.write("ALTER TABLE %s ADD COLUMN %s" % (table, col))
+-        grass.debug("ALTER TABLE %s ADD COLUMN %s" % (table, col))
++        p = grass.feed_command('db.execute', input='-',
++                               database=database, driver=driver)
++        res = "ALTER TABLE %s ADD COLUMN %s" % (table, col)
++        p.stdin.write(gcore.encode(res))
++        grass.debug(res)
+         p.stdin.close()
+         if p.wait() != 0:
+             grass.fatal(_("Unable to add column <%s>.") % col)
+Index: scripts/v.db.addtable/v.db.addtable.py
+===================================================================
+--- scripts/v.db.addtable/v.db.addtable.py	(revision 72759)
++++ scripts/v.db.addtable/v.db.addtable.py	(working copy)
+@@ -98,7 +98,7 @@
+     schema = kv['schema']
+ 
+     # maybe there is already a table linked to the selected layer?
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     try:
+         grass.vector_db(map_name, stderr=nuldev)[int(layer)]
+         grass.fatal(_("There is already a table linked to layer <%s>") % layer)
+Index: scripts/v.db.droptable/v.db.droptable.py
+===================================================================
+--- scripts/v.db.droptable/v.db.droptable.py	(revision 72759)
++++ scripts/v.db.droptable/v.db.droptable.py	(working copy)
+@@ -91,7 +91,7 @@
+ 
+     gscript.message(_("Current attribute table link(s):"))
+     # silently test first to avoid confusing error messages
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     try:
+         gscript.run_command('v.db.connect', flags='p', map=map, quiet=True,
+                             stdout=nuldev, stderr=nuldev)
+Index: scripts/v.db.reconnect.all/v.db.reconnect.all.py
+===================================================================
+--- scripts/v.db.reconnect.all/v.db.reconnect.all.py	(revision 72759)
++++ scripts/v.db.reconnect.all/v.db.reconnect.all.py	(working copy)
+@@ -284,5 +284,5 @@
+ 
+ if __name__ == "__main__":
+     options, flags = gscript.parser()
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     sys.exit(main())
+Index: scripts/v.db.univar/v.db.univar.py
+===================================================================
+--- scripts/v.db.univar/v.db.univar.py	(revision 72759)
++++ scripts/v.db.univar/v.db.univar.py	(working copy)
+@@ -101,5 +101,5 @@
+ 
+ if __name__ == "__main__":
+     options, flags = gscript.parser()
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     main()
+Index: scripts/v.dissolve/v.dissolve.py
+===================================================================
+--- scripts/v.dissolve/v.dissolve.py	(revision 72759)
++++ scripts/v.dissolve/v.dissolve.py	(working copy)
+@@ -46,7 +46,7 @@
+ 
+ 
+ def cleanup():
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     grass.run_command(
+         'g.remove', flags='f', type='vector', name='%s_%s' %
+         (output, tmp), quiet=True, stderr=nuldev)
+Index: scripts/v.in.e00/v.in.e00.py
+===================================================================
+--- scripts/v.in.e00/v.in.e00.py	(revision 72759)
++++ scripts/v.in.e00/v.in.e00.py	(working copy)
+@@ -109,14 +109,14 @@
+     if merging:
+         files.sort()
+         filename = "%s.cat.%s.e00" % (e00name, e00tmp)
+-        outf = file(filename, 'wb')
++        outf = open(filename, 'wb')
+         for f in files:
+-            inf = file(f, 'rb')
++            inf = open(f, 'rb')
+             shutil.copyfileobj(inf, outf)
+             inf.close()
+         outf.close()
+ 
+-    nuldev = file(os.devnull, 'w+')
++    nuldev = open(os.devnull, 'w+')
+ 
+     gcore.message(_("An error may appear next which will be ignored..."))
+     if gcore.call(['avcimport', filename, e00shortname], stdout=nuldev,
+Index: scripts/v.in.lines/v.in.lines.py
+===================================================================
+--- scripts/v.in.lines/v.in.lines.py	(revision 72759)
++++ scripts/v.in.lines/v.in.lines.py	(working copy)
+@@ -77,7 +77,7 @@
+ 
+     if not infile:
+         # read from stdin and write to tmpfile (v.in.mapgen wants a real file)
+-        outf = file(tmp, 'w')
++        outf = open(tmp, 'w')
+         for line in inf:
+             if len(line.lstrip()) == 0 or line[0] == '#':
+                 continue
+@@ -90,8 +90,8 @@
+         if fs == ' ':
+             runfile = infile
+         else:
+-            inf = file(infile)
+-            outf = file(tmp, 'w')
++            inf = open(infile)
++            outf = open(tmp, 'w')
+ 
+             for line in inf:
+                 if len(line.lstrip()) == 0 or line[0] == '#':
+@@ -103,7 +103,7 @@
+             runfile = tmp
+ 
+     # check that there are at least two columns (three if -z is given)
+-    inf = file(runfile)
++    inf = open(runfile)
+     for line in inf:
+         if len(line.lstrip()) == 0 or line[0] == '#':
+             continue
+Index: scripts/v.in.mapgen/v.in.mapgen.py
+===================================================================
+--- scripts/v.in.mapgen/v.in.mapgen.py	(revision 72759)
++++ scripts/v.in.mapgen/v.in.mapgen.py	(working copy)
+@@ -95,8 +95,8 @@
+     tmp = grass.tempfile()
+ 
+     # create ascii vector file
+-    inf = file(infile)
+-    outf = file(tmp, 'w')
++    inf = open(infile)
++    outf = open(tmp, 'w')
+ 
+     grass.message(_("Importing data..."))
+     cat = 1
+@@ -163,7 +163,7 @@
+ 
+     # create digit header
+     digfile = tmp + '.dig'
+-    outf = file(digfile, 'w')
++    outf = open(digfile, 'w')
+     t = string.Template(
+         """ORGANIZATION: GRASSroots organization
+ DIGIT DATE:   $date
+@@ -186,7 +186,7 @@
+     outf.write(s)
+ 
+     # process points list to ascii vector file (merge in vertices)
+-    inf = file(tmp)
++    inf = open(tmp)
+     shutil.copyfileobj(inf, outf)
+     inf.close()
+ 
+@@ -194,7 +194,7 @@
+ 
+     if not name:
+         # if no name for vector file given, cat to stdout
+-        inf = file(digfile)
++        inf = open(digfile)
+         shutil.copyfileobj(inf, sys.stdout)
+         inf.close()
+     else:
+Index: scripts/v.in.wfs/v.in.wfs.py
+===================================================================
+--- scripts/v.in.wfs/v.in.wfs.py	(revision 72759)
++++ scripts/v.in.wfs/v.in.wfs.py	(working copy)
+@@ -136,9 +136,8 @@
+     except URLError as e:
+         # GTC WFS request network failure
+         grass.fatal(_("Failed to reach the server.\nReason: %s") % e.reason)
+-        
+-    
+-    outf = file(tmpxml, 'wb')
++
++    outf = open(tmpxml, 'wb')
+     while True:
+         s = inf.read()
+         if not s:
+Index: scripts/v.rast.stats/v.rast.stats.py
+===================================================================
+--- scripts/v.rast.stats/v.rast.stats.py	(revision 72759)
++++ scripts/v.rast.stats/v.rast.stats.py	(working copy)
+@@ -72,6 +72,7 @@
+ import os
+ import atexit
+ import grass.script as grass
++import grass.script.core as gcore
+ from grass.exceptions import CalledModuleError
+ 
+ # i18N
+@@ -96,7 +97,7 @@
+     # we need a random name
+     tmpname = grass.basename(tmp)
+ 
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+ 
+     raster = options['raster']
+     colprefix = options['column_prefix']
+@@ -152,6 +153,7 @@
+     cats = []
+ 
+     for line in p.stdout:
++        line = gcore.decode(line)
+         cats.append(line.rstrip('\r\n').split(';')[0])
+     p.wait()
+ 
+@@ -247,7 +249,7 @@
+     # get rid of any earlier attempts
+     grass.try_remove(sqltmp)
+ 
+-    f = file(sqltmp, 'w')
++    f = open(sqltmp, 'w')
+ 
+     # do the stats
+     p = grass.pipe_command('r.univar', flags='t' + extstat, map=raster,
+@@ -261,7 +263,7 @@
+             first_line = 0
+             continue
+ 
+-        vars = line.rstrip('\r\n').split(';')
++        vars = gcore.decode(line).rstrip('\r\n').split(';')
+ 
+         f.write("UPDATE %s SET" % fi['table'])
+         first_var = 1
+Index: scripts/v.report/v.report.py
+===================================================================
+--- scripts/v.report/v.report.py	(revision 72759)
++++ scripts/v.report/v.report.py	(working copy)
+@@ -46,6 +46,7 @@
+ import sys
+ import os
+ import grass.script as grass
++import grass.script.core as gcore
+ 
+ # i18N
+ import gettext
+@@ -68,7 +69,7 @@
+     layer = options['layer']
+     units = options['units']
+ 
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+ 
+     if not grass.find_file(mapname, 'vector')['file']:
+         grass.fatal(_("Vector map <%s> not found") % mapname)
+@@ -99,6 +100,7 @@
+         records1 = []
+         catcol = -1
+         for line in p.stdout:
++            line = gcore.decode(line)
+             cols = line.rstrip('\r\n').split('|')
+             if catcol == -1:
+                 for i in range(0, len(cols)):
+@@ -132,6 +134,7 @@
+                                layer=layer, units=unitsp)
+         records2 = []
+         for line in p.stdout:
++            line = gcore.decode(line)
+             fields = line.rstrip('\r\n').split('|')
+             if fields[0] in ['cat', '-1', '0']:
+                 continue
+@@ -144,7 +147,9 @@
+         # v.db.select can return attributes that are not linked to features.
+         records3 = []
+         for r2 in records2:
+-            records3.append(filter(lambda r1: r1[catcol] == r2[0], records1)[0] + r2[1:])
++            res = list(filter(lambda r1: r1[catcol] == r2[0],
++                              records1))[0] + r2[1:]
++            records3.append(res)
+     else:
+         catcol = 0
+         records1 = []
+@@ -163,6 +168,7 @@
+                                layer=layer, units=unitsp)
+         records3 = []
+         for line in p.stdout:
++            line = gcore.decode(line)
+             fields = line.rstrip('\r\n').split('|')
+             if fields[0] in ['cat', '-1', '0']:
+                 continue
