@@ -1,0 +1,702 @@
+Index: lib/python/script/core.py
+===================================================================
+--- lib/python/script/core.py	(revision 72759)
++++ lib/python/script/core.py	(working copy)
+@@ -25,9 +25,8 @@
+ import subprocess
+ import shutil
+ import codecs
+-import types as python_types
+ 
+-from .utils import KeyValue, parse_key_val, basename, encode
++from .utils import KeyValue, parse_key_val, basename, encode, decode
+ from grass.exceptions import ScriptError, CalledModuleError
+ 
+ # i18N
+@@ -106,6 +105,21 @@
+     return bytes(val)
+ 
+ 
++def _make_unicode(val, enc):
++    """Convert value to unicode with given encoding
++
++    :param val: value to be converted
++    :param enc: encoding to be used
++    """
++    if val is None or enc is None:
++        return val
++    else:
++        if enc == 'default':
++            return decode(val)
++        else:
++            return decode(val, encoding=enc)
++
++
+ def get_commands():
+     """Create list of available GRASS commands to use when parsing
+     string from the command line
+@@ -301,7 +315,8 @@
+             continue
+         # convert string to bytes
+         opt = encode(opt)
+-        if val != None:
++        prog = encode(prog)
++        if val is not None:
+             if opt.startswith(b'_'):
+                 opt = opt[1:]
+                 warning(_("To run the module <%s> add underscore at the end"
+@@ -360,6 +375,9 @@
+ 
+     :return: Popen object
+     """
++    if 'encoding' in kwargs.keys():
++        encoding = kwargs.pop('encoding')
++
+     options = {}
+     popts = {}
+     for opt, val in kwargs.items():
+@@ -379,7 +397,6 @@
+         sys.stderr.flush()
+     return Popen(args, **popts)
+ 
+-
+ def run_command(*args, **kwargs):
+     """Execute a module synchronously
+ 
+@@ -408,11 +425,18 @@
+ 
+     :raises: ``CalledModuleError`` when module returns non-zero return code
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
++
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     ps = start_command(*args, **kwargs)
+     if _capture_stderr:
+         stdout, stderr = ps.communicate()
++        if encoding is not None:
++            stdout = _make_unicode(stdout, encoding)
++            stderr = _make_unicode(stderr, encoding)
+         returncode = ps.poll()
+         if returncode:
+             sys.stderr.write(stderr)
+@@ -466,10 +490,17 @@
+ 
+     :return: stdout
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
++
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     process = pipe_command(*args, **kwargs)
+     stdout, stderr = process.communicate()
++    if encoding is not None:
++        stdout = _make_unicode(stdout, encoding)
++        stderr = _make_unicode(stderr, encoding)
+     returncode = process.poll()
+     if _capture_stderr and returncode:
+         sys.stderr.write(stderr)
+@@ -539,12 +570,22 @@
+ 
+     :raises: ``CalledModuleError`` when module returns non-zero return code
+     """
++    encoding = 'default'
++    if 'encoding' in kwargs:
++        encoding = kwargs['encoding']
+     # TODO: should we delete it from kwargs?
+     stdin = kwargs['stdin']
++    if encoding is None or encoding == 'default':
++        stdin = encode(stdin)
++    else:
++        stdin = encode(stdin, encoding=encoding)
+     if _capture_stderr and 'stderr' not in kwargs.keys():
+         kwargs['stderr'] = PIPE
+     process = feed_command(*args, **kwargs)
+     unused, stderr = process.communicate(stdin)
++    if encoding is not None:
++        unused = _make_unicode(unused, encoding)
++        stderr = _make_unicode(stderr, encoding)
+     returncode = process.poll()
+     if _capture_stderr and returncode:
+         sys.stderr.write(stderr)
+@@ -738,14 +779,15 @@
+             break
+         try:
+             [var, val] = line.split(b'=', 1)
++            [var, val] = [decode(var), decode(val)]
+         except:
+             raise SyntaxError("invalid output from g.parser: %s" % line)
+ 
+-        if var.startswith(b'flag_'):
++        if var.startswith('flag_'):
+             flags[var[5:]] = bool(int(val))
+-        elif var.startswith(b'opt_'):
++        elif var.startswith('opt_'):
+             options[var[4:]] = val
+-        elif var in [b'GRASS_OVERWRITE', b'GRASS_VERBOSE']:
++        elif var in ['GRASS_OVERWRITE', 'GRASS_VERBOSE']:
+             os.environ[var] = val
+         else:
+             raise SyntaxError("invalid output from g.parser: %s" % line)
+@@ -1270,7 +1312,7 @@
+ 
+     :return: directory of mapsets/elements
+     """
+-    if isinstance(type, python_types.StringTypes) or len(type) == 1:
++    if isinstance(type, str) or len(type) == 1:
+         types = [type]
+         store_types = False
+     else:
+Index: lib/python/script/db.py
+===================================================================
+--- lib/python/script/db.py	(revision 72759)
++++ lib/python/script/db.py	(working copy)
+@@ -80,7 +80,7 @@
+ 
+     :return: True for success, False otherwise
+     """
+-    nuldev = file(os.devnull, 'w+')
++    nuldev = open(os.devnull, 'w+')
+     ok = True
+     try:
+         run_command('db.describe', flags='c', table=table,
+@@ -105,7 +105,7 @@
+     :return: parsed output of db.connect
+     """
+     try:
+-        nuldev = file(os.devnull, 'w')
++        nuldev = open(os.devnull, 'w')
+         conn = parse_command('db.connect', flags='g', stderr=nuldev)
+         nuldev.close()
+     except CalledModuleError:
+@@ -187,7 +187,7 @@
+     :param str table: name of table to query
+     """
+     from .vector import vector_db
+-    nuldev = file(os.devnull, 'w')
++    nuldev = open(os.devnull, 'w')
+     used = []
+     vects = list_strings('vector', mapset=mapset)
+     for vect in vects:
+Index: lib/python/script/task.py
+===================================================================
+--- lib/python/script/task.py	(revision 72759)
++++ lib/python/script/task.py	(working copy)
+@@ -430,7 +430,8 @@
+         """Get node text"""
+         p = node.find(tag)
+         if p is not None:
+-            return string.join(string.split(p.text), ' ')
++            res = ' '.join(p.text.split())
++            return res
+ 
+         return default
+ 
+@@ -452,7 +453,7 @@
+     enc = m.groups()[0]
+ 
+     # modify: change the encoding to "utf-8", for correct parsing
+-    xml_text_utf8 = xml_text.decode(enc).encode("utf-8")
++    xml_text_utf8 = decode(xml_text, encoding='utf-8')
+     p = re.compile('encoding="' + enc + '"', re.IGNORECASE)
+     xml_text_utf8 = p.sub('encoding="utf-8"', xml_text_utf8)
+ 
+@@ -472,6 +473,8 @@
+         p = Popen([cmd, '--interface-description'], stdout=PIPE,
+                   stderr=PIPE)
+         cmdout, cmderr = p.communicate()
++        cmdout = decode(cmdout)
++        cmderr = decode(cmderr)
+ 
+         # TODO: do it better (?)
+         if not cmdout and sys.platform == 'win32':
+@@ -488,17 +491,19 @@
+                        '--interface-description'],
+                       stdout=PIPE, stderr=PIPE)
+             cmdout, cmderr = p.communicate()
++            cmdout = decode(cmdout)
++            cmderr = decode(cmderr)
+ 
+             if cmd == 'd.rast3d':
+                 del sys.path[0]  # remove gui/scripts from the path
+ 
+         if p.returncode != 0:
+-            raise ScriptError(_("Unable to fetch interface description for command '%(cmd)s'."
+-                                 "\n\nDetails: %(det)s") % {'cmd': cmd, 'det': cmderr})
++            raise ScriptError(_("Unable to fetch interface description for command '<{cmd}>'."
++                                "\n\nDetails: <{det}>".format(cmd=cmd, det=cmderr)))
+ 
+     except OSError as e:
+-        raise ScriptError(_("Unable to fetch interface description for command '%(cmd)s'."
+-                             "\n\nDetails: %(det)s") % {'cmd': cmd, 'det': e})
++        raise ScriptError(_("Unable to fetch interface description for command '<{cmd}>'."
++                            "\n\nDetails: <{det}>".format(cmd=cmd, det=e)))
+ 
+     desc = cmdout.replace('grass-interface.dtd',
+                           os.path.join(os.getenv('GISBASE'),
+Index: lib/python/script/testsuite/test_db.py
+===================================================================
+--- lib/python/script/testsuite/test_db.py	(nonexistent)
++++ lib/python/script/testsuite/test_db.py	(working copy)
+@@ -0,0 +1,82 @@
++# -*- coding: utf-8 -*-
++"""
++Created on Tue May 31 11:33:13 2018
++
++"""
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++
++import grass.script as gscript
++from grass.script.core import run_command
++
++
++class TestDB(TestCase):
++    """Test Database functions"""
++
++    tmpname = 'myfirestations'
++    sql = "SELECT cat,CITY FROM myfirestations WHERE cat < 4"
++
++    def setUp(self):
++        run_command('g.copy', vector='firestations,myfirestations')
++
++    def tearDown(self):
++        run_command('g.remove', type='vector', name='myfirestations',
++                    flags='f')
++
++    def test_db_describe(self):
++        res = gscript.db_describe(self.tmpname)
++        self.assertEquals(isinstance(res, dict), True)
++        self.assertEquals(int(res['nrows']), 71)
++        self.assertEquals(int(res['ncols']), 22)
++
++    def test_db_table_exist(self):
++        res = gscript.db_table_exist(self.tmpname)
++        self.assertEquals(res, True)
++        res = gscript.db_table_exist('xyz')
++        self.assertEquals(res, False)
++
++    def test_db_connection(self):
++        res = gscript.db_connection()
++        self.assertEquals(isinstance(res, dict), True)
++        self.assertEquals(res['database'],
++                          '$GISDBASE/$LOCATION_NAME/$MAPSET/sqlite/sqlite.db')
++        res = gscript.db_connection(True)
++        self.assertEquals(isinstance(res, dict), True)
++        self.assertEquals(res['database'],
++                          '$GISDBASE/$LOCATION_NAME/$MAPSET/sqlite/sqlite.db')
++
++    def test_db_select(self):
++        res = gscript.db_select(sql=self.sql)
++        self.assertEquals(isinstance(res, tuple), True)
++        res = gscript.db_select(table=self.tmpname)
++        self.assertEquals(isinstance(res, tuple), True)
++        self.assertEquals(int(len(res)), 71)
++
++    def test_db_table_in_vector(self):
++        res = gscript.db_table_in_vector(self.tmpname)
++        self.assertEquals(isinstance(res, list), True)
++        res = gscript.db_table_in_vector('random')
++        self.assertEquals(isinstance(res, type(None)), True)
++
++    def test_db_begin_transaction(self):
++        res = gscript.db_begin_transaction('sqlite')
++        self.assertEquals(isinstance(res, str), True)
++        self.assertEquals(res, 'BEGIN')
++        res = gscript.db_begin_transaction('mysql')
++        self.assertEquals(isinstance(res, str), True)
++        self.assertEquals(res, 'START TRANSACTION')
++        res = gscript.db_begin_transaction('xyz')
++        self.assertEquals(isinstance(res, str), True)
++        self.assertEquals(res, '')
++
++    def test_db_commit_transaction(self):
++        res = gscript.db_commit_transaction('sqlite')
++        self.assertEquals(isinstance(res, str), True)
++        self.assertEquals(res, 'COMMIT')
++        res = gscript.db_commit_transaction('sdsmysql')
++        self.assertEquals(isinstance(res, str), True)
++        self.assertEquals(res, '')
++
++if __name__ == '__main__':
++    test()
+Index: lib/python/script/testsuite/test_start_command_functions.py
+===================================================================
+--- lib/python/script/testsuite/test_start_command_functions.py	(revision 72759)
++++ lib/python/script/testsuite/test_start_command_functions.py	(working copy)
+@@ -2,10 +2,13 @@
+ # the utf-8 is important because we do use the characters
+ """Tests of start_command function family (location independent)"""
+ 
++import sys
+ from grass.gunittest.case import TestCase
+ from grass.gunittest.main import test
+ 
+-from grass.script.core import start_command, PIPE, run_command
++from grass.script.core import start_command, PIPE, run_command, write_command
++from grass.script.core import read_command, find_program
++from grass.script.utils import encode
+ 
+ 
+ class TestPythonKeywordsInParameters(TestCase):
+@@ -22,7 +25,7 @@
+         stderr = proc.communicate()[1]
+         self.assertNotIn(b'_raster', stderr)
+         self.assertIn(self.raster, stderr,
+-            msg="Raster map name should appear in the error output")
++                      msg="Raster map name should appear in the error output")
+ 
+     def test_suffixed_underscore(self):
+         proc = start_command(
+@@ -30,7 +33,7 @@
+         stderr = proc.communicate()[1]
+         self.assertNotIn(b'raster_', stderr)
+         self.assertIn(self.raster, stderr,
+-            msg="Raster map name should appear in the error output")
++                      msg="Raster map name should appear in the error output")
+ 
+     def test_multiple_underscores(self):
+         proc = start_command(
+@@ -52,11 +55,16 @@
+ 
+     def test_python_module_ascii(self):
+         """This tests if Python module works"""
+-        run_command('g.search.modules', keyword=b'Priserny kun')
++        run_command('g.search.modules', keyword='Priserny kun', encoding=None)
+ 
++    def test_python_module_ascii_with_encoding(self):
++        """This tests if Python module works with user-specified encoding"""
++        run_command('g.search.modules', keyword='Priserny kun',
++                    encoding='utf-16')
++
+     def test_python_module_czech_nonascii(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
+-        run_command('g.search.modules', keyword=b'Příšerný kůň')
++        run_command('g.search.modules', keyword='Příšerný kůň')
+ 
+     def test_python_module_czech_unicode(self):
+         """This likely fails on non-UTF-8 systems (i.e. MS Win)"""
+@@ -63,5 +71,42 @@
+         run_command('g.search.modules', keyword=u'Příšerný kůň')
+ 
+ 
++class TestPythonModuleWithStdinStdout(TestCase):
++    raster = 'rand_raster'
++
++    @classmethod
++    def setUpClass(cls):
++        cls.runModule('g.region', s=0, n=10, w=0, e=10, res=1)
++        cls.runModule("r.mapcalc", expression="{} = rand(1, 5)".
++                      format(cls.raster), seed=1, overwrite=True)
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.runModule("g.remove", type='raster', name=cls.raster,
++                      flags='f')
++
++    def test_write_labels_unicode(self):
++        """This tests if Python module works"""
++        find_program('ls', '--version')
++        write_command('r.category', map=self.raster, rules='-',
++                      stdin='1:kůň\n2:kráva\n3:ovečka\n4:býk', separator=':')
++        res = read_command('r.category', map=self.raster,
++                           separator=':').strip()
++        self.assertEquals(res, u'1:kůň\n2:kráva\n3:ovečka\n4:býk')
++        if sys.version_info.major >= 3:
++            self.assertIsInstance(res, str)
++        else:
++            self.assertIsInstance(res, unicode)
++
++    def test_write_labels_bytes(self):
++        """This tests if Python module works"""
++        write_command('r.category', map=self.raster, rules='-',
++                      stdin='1:kůň\n2:kráva\n3:ovečka\n4:býk',
++                      separator=':', encoding=None)
++        res = read_command('r.category', map=self.raster,
++                           separator=':', encoding=None).strip()
++        self.assertEquals(res, encode('1:kůň\n2:kráva\n3:ovečka\n4:býk'))
++        self.assertIsInstance(res, bytes)
++
+ if __name__ == '__main__':
+     test()
+Index: lib/python/script/testsuite/test_task.py
+===================================================================
+--- lib/python/script/testsuite/test_task.py	(nonexistent)
++++ lib/python/script/testsuite/test_task.py	(working copy)
+@@ -0,0 +1,70 @@
++# -*- coding: utf-8 -*-
++"""
++Created on Tue Jun 1 10:56:05 2018
++
++"""
++import sys
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++
++from grass.script import task as gtask
++from grass.exceptions import ScriptError
++
++
++class TestTask(TestCase):
++    """Test Task functions"""
++
++    def test_command_info(self):
++        res = gtask.command_info('r.info')
++        self.assertEquals(isinstance(res, dict), True)
++        self.assertEquals(isinstance(res['keywords'], list), True)
++
++        with self.assertRaises(ScriptError):
++            gtask.command_info('bufer')
++
++    def test_cmdtuple_to_list(self):
++        tup = ('g.region', {'rast': 'geology'})
++        res = gtask.cmdtuple_to_list(tup)
++        self.assertEquals(isinstance(res, list), True)
++
++    def test_cmdlist_to_tuple(self):
++        l = ['g.region', 'rast', 'geology']
++        res = gtask.cmdlist_to_tuple(l)
++        self.assertEquals(isinstance(res, tuple), True)
++
++        with self.assertRaises(ScriptError):
++            l = ['gregion', 'rast', 'geology']
++            gtask.cmdlist_to_tuple(l)
++
++    def test_cmdstring_to_tuple(self):
++        s = "g.region rast=geology"
++        res = gtask.cmdstring_to_tuple(s)
++        self.assertEquals(isinstance(res, tuple), True)
++
++        with self.assertRaises(ScriptError):
++            s = "g.regiom geology"
++            gtask.cmdstring_to_tuple(s)
++
++    def test_parse_interface(self):
++        res = gtask.parse_interface('g.region')
++        self.assertEquals(isinstance(res, gtask.grassTask), True)
++
++        with self.assertRaises(ScriptError):
++            s = "g.regiom"
++            gtask.parse_interface(s)
++
++    def test_get_interface_description(self):
++        res = gtask.get_interface_description('g.region')
++
++        if sys.version_info.major >= 3:
++            self.assertEquals(isinstance(res, str), True)
++        else:
++            self.assertEquals(isinstance(res, unicode), True)
++
++        with self.assertRaises(ScriptError):
++            s = "g.regiom"
++            gtask.parse_interface(s)
++
++if __name__ == '__main__':
++    test()
+Index: lib/python/script/testsuite/test_utils.py
+===================================================================
+--- lib/python/script/testsuite/test_utils.py	(revision 72759)
++++ lib/python/script/testsuite/test_utils.py	(working copy)
+@@ -1,5 +1,6 @@
+ # -*- coding: utf-8 -*-
+ import os
++import sys
+ 
+ from grass.gunittest.case import TestCase
+ from grass.gunittest.main import test
+@@ -39,25 +40,35 @@
+     def test_unicode(self):
+         self.assertEqual(b'text', utils.encode(u'text'))
+ 
+-    def test_bytes_grabage_in_out(self):
++    def test_bytes_garbage_in_out(self):
+         """If the input is bytes we should not touch it for encoding"""
+-        self.assertEqual(b'Příšerný kůň', utils.encode(b'Příšerný kůň'))
++        self.assertEqual(b'P\xc5\x99\xc3\xad\xc5\xa1ern\xc3\xbd k\xc5\xaf\xc5\x88',
++                         utils.encode('Příšerný kůň'))
+ 
+     def test_int(self):
+         """If the input is an integer return bytes"""
+-        self.assertEqual(b'1234567890', utils.encode(1234567890))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, 1234567890)
++        else:
++            self.assertEqual('1234567890', utils.encode(1234567890))
+ 
+     def test_float(self):
+         """If the input is a float return bytes"""
+-        self.assertEqual(b'12345.6789', utils.encode(12345.6789))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, 12345.6789)
++        else:
++            self.assertEqual('12345.6789', utils.encode(12345.6789))
+ 
+     def test_none(self):
+         """If the input is a boolean return bytes"""
+-        self.assertEqual(b'None', utils.encode(None))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.encode, None)
++        else:
++            self.assertEqual('None', utils.encode(None))
+ 
+ 
+ class TestDecode(TestCase):
+-    """Tests function `encode` that convert value to unicode."""
++    """Tests function `decode` that converts value to unicode."""
+ 
+     def test_bytes(self):
+         self.assertEqual(u'text', utils.decode(b'text'))
+@@ -67,15 +78,24 @@
+ 
+     def test_int(self):
+         """If the input is an integer return bytes"""
+-        self.assertEqual(u'1234567890', utils.decode(1234567890))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, 1234567890)
++        else:
++            self.assertEqual(u'1234567890', utils.decode(1234567890))
+ 
+     def test_float(self):
+         """If the input is a float return bytes"""
+-        self.assertEqual(u'12345.6789', utils.decode(12345.6789))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, 12345.6789)
++        else:
++            self.assertEqual(u'12345.6789', utils.decode(12345.6789))
+ 
+     def test_none(self):
+         """If the input is a boolean return bytes"""
+-        self.assertEqual(u'None', utils.decode(None))
++        if sys.version_info.major >= 3:
++            self.assertRaises(TypeError, utils.decode, None)
++        else:
++            self.assertEqual(u'None', utils.decode(None))
+ 
+ 
+ class TestEncodeLcAllC(TestEncode, LcAllC):
+Index: lib/python/script/testsuite/test_vector.py
+===================================================================
+--- lib/python/script/testsuite/test_vector.py	(nonexistent)
++++ lib/python/script/testsuite/test_vector.py	(working copy)
+@@ -0,0 +1,40 @@
++# -*- coding: utf-8 -*-
++"""
++Created on Tue May 29 11:33:13 2018
++
++"""
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++
++import grass.script as gscript
++
++
++class TestVector(TestCase):
++    """Test Vector functions"""
++
++    map = 'geology'
++    coords = (643770, 227888)
++
++    def test_vector_columns(self):
++        res = gscript.vector_columns(self.map)
++        self.assertEquals(isinstance(res, dict), True)
++        res = gscript.vector_columns(self.map, getDict=False)
++        self.assertEquals(isinstance(res, list), True)
++
++    def test_vector_info_topo(self):
++        res = gscript.vector_info_topo(self.map)
++        self.assertEquals(isinstance(res, dict), True)
++        self.assertEquals(int(res['centroids']), 1832)
++
++    def test_vector_info(self):
++        res = gscript.vector_info(self.map)
++        self.assertEquals(float(res['south']), 10875.8272320917)
++
++    def test_vector_what(self):
++        res = gscript.vector_what(self.map, self.coords)
++        self.assertEquals(float(res[0]['Sq_Meters']), 333074608.99)
++        self.assertEquals(float(res[0]['Acres']), 82304.528)
++
++if __name__ == '__main__':
++    test()
+Index: lib/python/script/utils.py
+===================================================================
+--- lib/python/script/utils.py	(revision 72759)
++++ lib/python/script/utils.py	(working copy)
+@@ -163,12 +163,13 @@
+     return encoding
+ 
+ 
+-def decode(bytes_):
++def decode(bytes_, encoding=None):
+     """Decode bytes with default locale and return (unicode) string
+ 
+     No-op if parameter is not bytes (assumed unicode string).
+ 
+     :param bytes bytes_: the bytes to decode
++    :param encoding: encoding to be used, default value is None
+ 
+     Example
+     -------
+@@ -183,12 +184,21 @@
+     if isinstance(bytes_, unicode):
+         return bytes_
+     if isinstance(bytes_, bytes):
+-        enc = _get_encoding()
++        if encoding is None:
++            enc = _get_encoding()
++        else:
++            enc = encoding
+         return bytes_.decode(enc)
+-    return unicode(bytes_)
++    # if something else than text
++    if sys.version_info.major >= 3:
++        # only text should be used
++        raise TypeError("can only accept types str and bytes")
++    else:
++        # for backwards compatibility
++        return unicode(bytes_)
+ 
+ 
+-def encode(string):
++def encode(string, encoding=None):
+     """Encode string with default locale and return bytes with that encoding
+ 
+     No-op if parameter is bytes (assumed already encoded).
+@@ -195,6 +205,7 @@
+     This ensures garbage in, garbage out.
+ 
+     :param str string: the string to encode
++    :param encoding: encoding to be used, default value is None
+ 
+     Example
+     -------
+@@ -208,10 +219,20 @@
+     """
+     if isinstance(string, bytes):
+         return string
++    # this also tests str in Py3:
+     if isinstance(string, unicode):
+-        enc = _get_encoding()
++        if encoding is None:
++            enc = _get_encoding()
++        else:
++            enc = encoding
+         return string.encode(enc)
+-    return bytes(string)
++    # if something else than text
++    if sys.version_info.major >= 3:
++        # only text should be used
++        raise TypeError("can only accept types str and bytes")
++    else:
++        # for backwards compatibility
++        return bytes(string)
+ 
+ 
+ def parse_key_val(s, sep='=', dflt=None, val_type=None, vsep=None):
