@@ -109,7 +109,15 @@ Index: scripts/g.extension/g.extension.py
 ===================================================================
 --- scripts/g.extension/g.extension.py	(revision 72759)
 +++ scripts/g.extension/g.extension.py	(working copy)
-@@ -564,7 +564,7 @@
+@@ -136,6 +136,7 @@
+ import zipfile
+ import tempfile
+ from distutils.dir_util import copy_tree
++from grass.script.utils import decode, encode
+ 
+ try:
+     from urllib2 import HTTPError, URLError
+@@ -564,7 +565,7 @@
          grass.warning(_("Unable to fetch '%s'") % url)
          return
  
@@ -118,19 +126,19 @@ Index: scripts/g.extension/g.extension.py
          # list extensions
          sline = pattern.search(line)
          if not sline:
-@@ -1030,6 +1030,7 @@
+@@ -1030,6 +1031,7 @@
          for name in files:
              filename = os.path.join(root, name)
              data = open(filename, 'rb').read()
-+            data = grass.decode(data)
++            data = decode(data)
              if '\0' in data:
                  continue  # ignore binary files
              # we don't expect there would be CRLF file by purpose
-@@ -1037,6 +1038,7 @@
+@@ -1037,6 +1039,7 @@
              newdata = data.replace('\r\n', '\n')
              if newdata != data:
                  newfile = open(filename, 'wb')
-+                newdata = grass.encode(newdata)
++                newdata = encode(newdata)
                  newfile.write(newdata)
                  newfile.close()
  
@@ -177,7 +185,7 @@ Index: scripts/i.pansharpen/i.pansharpen.py
      hasNumPy = False
  
  import grass.script as grass
-+from grass.script.core import decode
++from grass.script.utils import decode
  
  # i18N
  import gettext
@@ -207,15 +215,23 @@ Index: scripts/m.proj/m.proj.py
 ===================================================================
 --- scripts/m.proj/m.proj.py	(revision 72759)
 +++ scripts/m.proj/m.proj.py	(working copy)
-@@ -117,6 +117,7 @@
+@@ -97,6 +97,7 @@
+ import threading
+ from grass.script.utils import separator, parse_key_val
+ from grass.script import core as gcore
++from grass.script.utils import decode, encode
+ 
+ # i18N
+ import gettext
+@@ -117,6 +118,7 @@
              if not line:
                  break
              line = line.replace(self.ifs, ' ')
-+            line = gcore.encode(line)
++            line = encode(line)
              self.outf.write(line)
              self.outf.flush()
  
-@@ -231,7 +232,7 @@
+@@ -231,7 +233,7 @@
          fd = open(tmpfile, "w")
          fd.write("%s%s%s\n" % (x, ifs, y))
          fd.close()
@@ -224,7 +240,7 @@ Index: scripts/m.proj/m.proj.py
      else:
          if input == '-':
              infile = None
-@@ -240,7 +241,7 @@
+@@ -240,7 +242,7 @@
              infile = input
              if not os.path.exists(infile):
                  gcore.fatal(_("Unable to read input data"))
@@ -233,19 +249,19 @@ Index: scripts/m.proj/m.proj.py
              gcore.debug("input file=[%s]" % infile)
  
      # set up output file
-@@ -279,6 +280,7 @@
+@@ -279,6 +281,7 @@
              outf.write("x%sy%sz\n" % (ofs, ofs))
          for line in p.stdout:
              try:
-+                line = gcore.decode(line)
++                line = decode(line)
                  xy, z = line.split(' ', 1)
                  x, y = xy.split('\t')
              except ValueError:
-@@ -290,6 +292,7 @@
+@@ -290,6 +293,7 @@
          if include_header:
              outf.write("input_x%sinput_y%sx%sy%sz\n" % (ofs, ofs, ofs, ofs))
          for line in p.stdout:
-+            line = gcore.decode(line)
++            line = decode(line)
              inXYZ, x, rest = line.split('\t')
              inX, inY = inXYZ.split(' ')[:2]
              y, z = rest.split(' ', 1)
@@ -253,18 +269,26 @@ Index: scripts/r.buffer.lowmem/r.buffer.lowmem.py
 ===================================================================
 --- scripts/r.buffer.lowmem/r.buffer.lowmem.py	(revision 72759)
 +++ scripts/r.buffer.lowmem/r.buffer.lowmem.py	(working copy)
-@@ -124,10 +124,12 @@
+@@ -46,6 +46,7 @@
+ import atexit
+ import math
+ import grass.script as grass
++from grass.script.utils import decode
+ 
+ # i18N
+ import gettext
+@@ -124,10 +125,12 @@
  
      p = grass.feed_command('r.category', map=output,
                             separator=':', rules='-')
 -    p.stdin.write("1:distances calculated from these locations\n")
 +    msg = "1:distances calculated from these locations\n"
-+    p.stdin.write(grass.core.encode(msg))
++    p.stdin.write(encode(msg))
      d0 = "0"
      for n, d in enumerate(distances):
 -        p.stdin.write("%d:%s-%s %s\n" % (n + 2, d0, d, units))
 +        msg = "%d:%s-%s %s\n" % (n + 2, d0, d, units)
-+        p.stdin.write(grass.core.encode(msg))
++        p.stdin.write(encode(msg))
          d0 = d
      p.stdin.close()
      p.wait()
@@ -343,7 +367,7 @@ Index: scripts/r.mask/r.mask.py
  import atexit
  
  import grass.script as grass
-+import grass.script.core as gcore
++from grass.script.utils import encode
  from grass.exceptions import CalledModuleError
  
  # i18N
@@ -353,7 +377,7 @@ Index: scripts/r.mask/r.mask.py
                  rules='-')
 -            p.stdin.write("%s = 1" % maskcats)
 +            res = "%s = 1" % maskcats
-+            p.stdin.write(gcore.encode(res))
++            p.stdin.write(encode(res))
              p.stdin.close()
              p.wait()
          elif vector:
@@ -365,7 +389,7 @@ Index: scripts/r.reclass.area/r.reclass.area.py
  import os
  import atexit
  import grass.script as grass
-+import grass.script.core as gcore
++from grass.script.utils import decode, encode
  
  # i18N
  import gettext
@@ -374,7 +398,7 @@ Index: scripts/r.reclass.area/r.reclass.area.py
      rules = ''
      for line in p1.stdout:
 -        f = line.rstrip(os.linesep).split(';')
-+        f = gcore.decode(line).rstrip(os.linesep).split(';')
++        f = decode(line).rstrip(os.linesep).split(';')
          if len(f) < 5:
              continue
          hectares = float(f[4]) * 0.0001
@@ -383,7 +407,7 @@ Index: scripts/r.reclass.area/r.reclass.area.py
              rules += "%s = %s %s\n" % (f[0], f[2], f[3])
      if rules:
 -        p2.stdin.write(rules)
-+        p2.stdin.write(gcore.encode(rules))
++        p2.stdin.write(encode(rules))
      p1.wait()
      p2.stdin.close()
      p2.wait()
@@ -395,7 +419,7 @@ Index: scripts/v.db.addcolumn/v.db.addcolumn.py
  import sys
  import os
  import grass.script as grass
-+import grass.script.core as gcore
++from grass.script.utils import encode
  
  # i18N
  import gettext
@@ -409,7 +433,7 @@ Index: scripts/v.db.addcolumn/v.db.addcolumn.py
 +        p = grass.feed_command('db.execute', input='-',
 +                               database=database, driver=driver)
 +        res = "ALTER TABLE %s ADD COLUMN %s" % (table, col)
-+        p.stdin.write(gcore.encode(res))
++        p.stdin.write(encode(res))
 +        grass.debug(res)
          p.stdin.close()
          if p.wait() != 0:
@@ -596,7 +620,7 @@ Index: scripts/v.rast.stats/v.rast.stats.py
  import os
  import atexit
  import grass.script as grass
-+import grass.script.core as gcore
++from grass.script.utils import decode
  from grass.exceptions import CalledModuleError
  
  # i18N
@@ -613,7 +637,7 @@ Index: scripts/v.rast.stats/v.rast.stats.py
      cats = []
  
      for line in p.stdout:
-+        line = gcore.decode(line)
++        line = decode(line)
          cats.append(line.rstrip('\r\n').split(';')[0])
      p.wait()
  
@@ -631,7 +655,7 @@ Index: scripts/v.rast.stats/v.rast.stats.py
              continue
  
 -        vars = line.rstrip('\r\n').split(';')
-+        vars = gcore.decode(line).rstrip('\r\n').split(';')
++        vars = decode(line).rstrip('\r\n').split(';')
  
          f.write("UPDATE %s SET" % fi['table'])
          first_var = 1
@@ -643,7 +667,7 @@ Index: scripts/v.report/v.report.py
  import sys
  import os
  import grass.script as grass
-+import grass.script.core as gcore
++from grass.script.utils import decode
  
  # i18N
  import gettext
@@ -660,7 +684,7 @@ Index: scripts/v.report/v.report.py
          records1 = []
          catcol = -1
          for line in p.stdout:
-+            line = gcore.decode(line)
++            line = decode(line)
              cols = line.rstrip('\r\n').split('|')
              if catcol == -1:
                  for i in range(0, len(cols)):
@@ -668,7 +692,7 @@ Index: scripts/v.report/v.report.py
                                 layer=layer, units=unitsp)
          records2 = []
          for line in p.stdout:
-+            line = gcore.decode(line)
++            line = decode(line)
              fields = line.rstrip('\r\n').split('|')
              if fields[0] in ['cat', '-1', '0']:
                  continue
@@ -687,7 +711,7 @@ Index: scripts/v.report/v.report.py
                                 layer=layer, units=unitsp)
          records3 = []
          for line in p.stdout:
-+            line = gcore.decode(line)
++            line = decode(line)
              fields = line.rstrip('\r\n').split('|')
              if fields[0] in ['cat', '-1', '0']:
                  continue
