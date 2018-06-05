@@ -13,6 +13,23 @@ Index: lib/python/script/core.py
  from grass.exceptions import ScriptError, CalledModuleError
  
  # i18N
+@@ -38,14 +37,14 @@
+     # python2
+     import __builtin__
+     from os import environ
++    __builtin__.__dict__['_'] = __builtin__.__dict__['_'].__self__.ugettext
+ except ImportError:
+     # python3
+     import builtins as __builtin__
+     from os import environb as environ
+     unicode = str
+-__builtin__.__dict__['_'] = __builtin__.__dict__['_'].__self__.lgettext
++    __builtin__.__dict__['_'] = __builtin__.__dict__['_'].__self__.gettext
+ 
+-
+ # subprocess wrapper that uses shell on Windows
+ 
+ 
 @@ -106,6 +105,21 @@
      return bytes(val)
  
@@ -45,7 +62,17 @@ Index: lib/python/script/core.py
              if opt.startswith(b'_'):
                  opt = opt[1:]
                  warning(_("To run the module <%s> add underscore at the end"
-@@ -360,6 +375,9 @@
+@@ -328,7 +343,8 @@
+     else:
+         # TODO: construction of the whole command is far from perfect
+         args = make_command(*args, **kwargs)
+-        raise CalledModuleError(module=None, code=repr(args),
++        code = ''.join([decode(each) for each in args])
++        raise CalledModuleError(module=None, code=code,
+                                 returncode=returncode)
+ 
+ def start_command(prog, flags=b"", overwrite=False, quiet=False,
+@@ -360,6 +376,9 @@
  
      :return: Popen object
      """
@@ -55,7 +82,7 @@ Index: lib/python/script/core.py
      options = {}
      popts = {}
      for opt, val in kwargs.items():
-@@ -379,7 +397,6 @@
+@@ -379,7 +398,6 @@
          sys.stderr.flush()
      return Popen(args, **popts)
  
@@ -63,7 +90,7 @@ Index: lib/python/script/core.py
  def run_command(*args, **kwargs):
      """Execute a module synchronously
  
-@@ -408,11 +425,18 @@
+@@ -408,11 +426,18 @@
  
      :raises: ``CalledModuleError`` when module returns non-zero return code
      """
@@ -82,7 +109,7 @@ Index: lib/python/script/core.py
          returncode = ps.poll()
          if returncode:
              sys.stderr.write(stderr)
-@@ -466,10 +490,17 @@
+@@ -466,10 +491,17 @@
  
      :return: stdout
      """
@@ -100,7 +127,7 @@ Index: lib/python/script/core.py
      returncode = process.poll()
      if _capture_stderr and returncode:
          sys.stderr.write(stderr)
-@@ -539,12 +570,22 @@
+@@ -539,12 +571,22 @@
  
      :raises: ``CalledModuleError`` when module returns non-zero return code
      """
@@ -123,7 +150,7 @@ Index: lib/python/script/core.py
      returncode = process.poll()
      if _capture_stderr and returncode:
          sys.stderr.write(stderr)
-@@ -738,14 +779,15 @@
+@@ -738,14 +780,15 @@
              break
          try:
              [var, val] = line.split(b'=', 1)
@@ -142,7 +169,7 @@ Index: lib/python/script/core.py
              os.environ[var] = val
          else:
              raise SyntaxError("invalid output from g.parser: %s" % line)
-@@ -1270,7 +1312,7 @@
+@@ -1270,7 +1313,7 @@
  
      :return: directory of mapsets/elements
      """
@@ -196,39 +223,38 @@ Index: lib/python/script/task.py
  
          return default
  
-@@ -452,7 +453,7 @@
+@@ -444,17 +445,19 @@
+ 
+     # modify: fetch encoding from the interface description text(xml)
+     # e.g. <?xml version="1.0" encoding="GBK"?>
+-    pattern = re.compile('<\?xml[^>]*\Wencoding="([^"]*)"[^>]*\?>')
++    pattern = re.compile(b'<\?xml[^>]*\Wencoding="([^"]*)"[^>]*\?>')
+     m = re.match(pattern, xml_text)
+     if m is None:
+         return xml_text
+     #
      enc = m.groups()[0]
++    # for Python 3
++    enc_decoded = enc.decode('ascii')
  
      # modify: change the encoding to "utf-8", for correct parsing
 -    xml_text_utf8 = xml_text.decode(enc).encode("utf-8")
-+    xml_text_utf8 = decode(xml_text, encoding='utf-8')
-     p = re.compile('encoding="' + enc + '"', re.IGNORECASE)
-     xml_text_utf8 = p.sub('encoding="utf-8"', xml_text_utf8)
+-    p = re.compile('encoding="' + enc + '"', re.IGNORECASE)
+-    xml_text_utf8 = p.sub('encoding="utf-8"', xml_text_utf8)
++    xml_text_utf8 = xml_text.decode(enc_decoded).encode("utf-8")
++    p = re.compile(b'encoding="' + enc + b'"', re.IGNORECASE)
++    xml_text_utf8 = p.sub(b'encoding="utf-8"', xml_text_utf8)
  
-@@ -472,6 +473,8 @@
-         p = Popen([cmd, '--interface-description'], stdout=PIPE,
-                   stderr=PIPE)
-         cmdout, cmderr = p.communicate()
-+        cmdout = decode(cmdout)
-+        cmderr = decode(cmderr)
+     return xml_text_utf8
  
-         # TODO: do it better (?)
-         if not cmdout and sys.platform == 'win32':
-@@ -488,17 +491,19 @@
-                        '--interface-description'],
-                       stdout=PIPE, stderr=PIPE)
-             cmdout, cmderr = p.communicate()
-+            cmdout = decode(cmdout)
-+            cmderr = decode(cmderr)
- 
-             if cmd == 'd.rast3d':
+@@ -493,18 +496,18 @@
                  del sys.path[0]  # remove gui/scripts from the path
  
          if p.returncode != 0:
 -            raise ScriptError(_("Unable to fetch interface description for command '%(cmd)s'."
 -                                 "\n\nDetails: %(det)s") % {'cmd': cmd, 'det': cmderr})
 +            raise ScriptError(_("Unable to fetch interface description for command '<{cmd}>'."
-+                                "\n\nDetails: <{det}>".format(cmd=cmd, det=cmderr)))
++                                "\n\nDetails: <{det}>".format(cmd=cmd, det=decode(cmderr))))
  
      except OSError as e:
 -        raise ScriptError(_("Unable to fetch interface description for command '%(cmd)s'."
@@ -236,8 +262,19 @@ Index: lib/python/script/task.py
 +        raise ScriptError(_("Unable to fetch interface description for command '<{cmd}>'."
 +                            "\n\nDetails: <{det}>".format(cmd=cmd, det=e)))
  
-     desc = cmdout.replace('grass-interface.dtd',
-                           os.path.join(os.getenv('GISBASE'),
+-    desc = cmdout.replace('grass-interface.dtd',
+-                          os.path.join(os.getenv('GISBASE'),
+-                                       'gui', 'xml',
+-                                       'grass-interface.dtd'))
+-    return convert_xml_to_utf8(desc)
++    desc = convert_xml_to_utf8(cmdout)
++    desc = desc.replace(b'grass-interface.dtd',
++                        os.path.join(os.getenv('GISBASE'), 'gui', 'xml',
++                                     'grass-interface.dtd').encode('utf-8'))
++    return desc
+ 
+ 
+ def parse_interface(name, parser=processTask, blackList=None):
 Index: lib/python/script/testsuite/test_db.py
 ===================================================================
 --- lib/python/script/testsuite/test_db.py	(nonexistent)
@@ -428,7 +465,7 @@ Index: lib/python/script/testsuite/test_task.py
 ===================================================================
 --- lib/python/script/testsuite/test_task.py	(nonexistent)
 +++ lib/python/script/testsuite/test_task.py	(working copy)
-@@ -0,0 +1,70 @@
+@@ -0,0 +1,66 @@
 +# -*- coding: utf-8 -*-
 +"""
 +Created on Tue Jun 1 10:56:05 2018
@@ -487,11 +524,7 @@ Index: lib/python/script/testsuite/test_task.py
 +
 +    def test_get_interface_description(self):
 +        res = gtask.get_interface_description('g.region')
-+
-+        if sys.version_info.major >= 3:
-+            self.assertEquals(isinstance(res, str), True)
-+        else:
-+            self.assertEquals(isinstance(res, unicode), True)
++        self.assertEquals(isinstance(res, bytes), True)
 +
 +        with self.assertRaises(ScriptError):
 +            s = "g.regiom"
