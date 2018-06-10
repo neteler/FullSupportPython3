@@ -1257,6 +1257,102 @@ Index: scripts/r.shade/testsuite/test_r_shade.py
 +
 +if __name__ == '__main__':
 +    test()
+Index: scripts/r.tileset/testsuite/test_r_tileset.py
+===================================================================
+--- scripts/r.tileset/testsuite/test_r_tileset.py	(nonexistent)
++++ scripts/r.tileset/testsuite/test_r_tileset.py	(working copy)
+@@ -0,0 +1,46 @@
++"""
++Created on Sun Jun 08 19:42:32 2018
++
++@author: Sanjeet Bhatti
++"""
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++from grass.gunittest.gmodules import SimpleModule
++
++from grass.script.utils import decode
++
++import os
++
++output = """\
++-78.77462049|35.6875073|-78.60830318|35.74855834|1506|678
++-78.77462049|35.74855834|-78.60830318|35.80960938|1506|678
++""".replace('\n', os.linesep)
++
++
++class TestRTileset(TestCase):
++    """Test r.tileset script"""
++
++    mapName = 'elevation'
++
++    @classmethod
++    def setUpClass(cls):
++        """Use temporary region settings"""
++        cls.use_temp_region()
++        cls.runModule('g.region', raster=cls.mapName, flags='p')
++
++    @classmethod
++    def tearDownClass(cls):
++        """!Remove the temporary region"""
++        cls.del_temp_region()
++
++    def test_tiling(self):
++        """Produce tiling test"""
++        module = SimpleModule('r.tileset', sourceproj='+init=epsg:4326',
++                              maxrows=1024, maxcols=2048)
++        self.assertModule(module)
++
++        self.assertMultiLineEqual(decode(module.outputs.stdout), output)
++
++if __name__ == '__main__':
++    test()
+Index: scripts/v.centroids/testsuite/test_v_centroids.py
+===================================================================
+--- scripts/v.centroids/testsuite/test_v_centroids.py	(nonexistent)
++++ scripts/v.centroids/testsuite/test_v_centroids.py	(working copy)
+@@ -0,0 +1,40 @@
++"""
++Created on Thrs Jun 09 11:26:12 2018
++
++@author: Sanjeet Bhatti
++"""
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++from grass.gunittest.gmodules import SimpleModule
++
++
++class TestVCentroids(TestCase):
++    """Test v.centroids script"""
++    mapName = 'busroute11'
++    outRouteMap = 'busroute11_boundary'
++    fromType = 'line'
++    toType = 'boundary'
++    outAreaMap = 'busroute11_area'
++
++    @classmethod
++    def setUpClass(cls):
++        """Create an area from a closed line"""
++        cls.runModule('v.type', input=cls.mapName, output=cls.outRouteMap,
++                      from_type=cls.fromType, to_type=cls.toType)
++
++    @classmethod
++    def tearDownClass(cls):
++        """Remove the generated maps"""
++        cls.runModule('g.remove', flags='f', type='vector',
++                      name=(cls.outRouteMap, cls.outAreaMap))
++
++    def test_area(self):
++        """Adds missing centroids to closed boundaries test"""
++        module = SimpleModule('v.centroids', input=self.outRouteMap,
++                              output=self.outAreaMap)
++        self.assertModule(module)
++        self.assertVectorExists(self.outAreaMap)
++
++if __name__ == '__main__':
++    test()
 Index: scripts/v.db.addcolumn/testsuite/test_v_db_addcolumn.py
 ===================================================================
 --- scripts/v.db.addcolumn/testsuite/test_v_db_addcolumn.py	(nonexistent)
@@ -1341,6 +1437,57 @@ Index: scripts/v.db.addcolumn/v.db.addcolumn.py
          p.stdin.close()
          if p.wait() != 0:
              grass.fatal(_("Unable to add column <%s>.") % col)
+Index: scripts/v.db.addtable/testsuite/test_v_db_addtable.py
+===================================================================
+--- scripts/v.db.addtable/testsuite/test_v_db_addtable.py	(nonexistent)
++++ scripts/v.db.addtable/testsuite/test_v_db_addtable.py	(working copy)
+@@ -0,0 +1,46 @@
++"""
++Created on Sun Jun 09 12:01:34 2018
++
++@author: Sanjeet Bhatti
++"""
++
++from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
++from grass.gunittest.gmodules import SimpleModule
++
++from grass.script.core import run_command
++from grass.script.utils import decode
++
++
++class TestVDbAddTable(TestCase):
++    """Test v.db.addtable script"""
++
++    @classmethod
++    def setUpClass(cls):
++        """Copy vector."""
++        run_command('g.copy', vector='roadsmajor,myroads')
++
++    @classmethod
++    def tearDownClass(cls):
++        """Remove copied vector"""
++        run_command('g.remove', type='vector', name='myroads',
++                    flags='f')
++
++    def test_add_single_columned_table_check(self):
++        """Add a new attribute table with single column to layer 2"""
++        module = SimpleModule('v.db.addtable', map='myroads',
++                              columns='slope double precision', layer=2)
++        self.assertModule(module)
++
++        run_command('v.db.connect', flags='p', map='myroads')
++
++        m = SimpleModule('v.info', map='myroads', flags='c')
++        self.assertModule(m)
++        self.assertNotRegexpMatches(decode(m.outputs.stdout), 'slope')
++
++        m = SimpleModule('v.info', map='myroads', flags='c', layer=2)
++        self.assertModule(m)
++        self.assertRegexpMatches(decode(m.outputs.stdout), 'slope')
++
++if __name__ == '__main__':
++    test()
 Index: scripts/v.db.addtable/v.db.addtable.py
 ===================================================================
 --- scripts/v.db.addtable/v.db.addtable.py	(revision 72791)
@@ -2091,44 +2238,6 @@ Index: scripts/v.pack/testsuite/test_v_pack.py
 +
 +if __name__ == '__main__':
 +    test()
-Index: scripts/v.rast.stats/testsuite/test_v_rast_stats.py
-===================================================================
---- scripts/v.rast.stats/testsuite/test_v_rast_stats.py	(revision 72791)
-+++ scripts/v.rast.stats/testsuite/test_v_rast_stats.py	(working copy)
-@@ -93,21 +93,21 @@
-         self.assertLooksLike(output_str, v_db_select.outputs.stdout)
- 
- 
--class TestRastStatsFails(TestCase):
-+# class TestRastStatsFails(TestCase):
- 
--    def test_error_handling_a(self):
--        # No vector map
--        self.assertModuleFail("v.rast.stats", raster="map_a",
--                              column_prefix="a")
-+#     def test_error_handling_a(self):
-+#         # No vector map
-+#         self.assertModuleFail("v.rast.stats", raster="map_a",
-+#                               column_prefix="a")
- 
--    def test_error_handling_b(self):
--        # No raster map
--        self.assertModuleFail("v.rast.stats", map="zone_map",
--                              column_prefix="a")
-+#     def test_error_handling_b(self):
-+#         # No raster map
-+#         self.assertModuleFail("v.rast.stats", map="zone_map",
-+#                               column_prefix="a")
- 
--    def test_error_handling_d(self):
--        # No column_prefix
--        self.assertModuleFail("v.rast.stats", map="zone_map", raster="map_b")
-+#     def test_error_handling_d(self):
-+#         # No column_prefix
-+#         self.assertModuleFail("v.rast.stats", map="zone_map", raster="map_b")
- 
- if __name__ == '__main__':
-     from grass.gunittest.main import test
 Index: scripts/v.rast.stats/v.rast.stats.py
 ===================================================================
 --- scripts/v.rast.stats/v.rast.stats.py	(revision 72791)
