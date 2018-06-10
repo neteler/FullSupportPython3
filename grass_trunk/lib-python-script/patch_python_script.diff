@@ -182,7 +182,18 @@ Index: lib/python/script/db.py
 ===================================================================
 --- lib/python/script/db.py	(revision 72759)
 +++ lib/python/script/db.py	(working copy)
-@@ -80,7 +80,7 @@
+@@ -40,6 +40,10 @@
+ 
+     :return: parsed module output
+     """
++    if 'database' in args and args['database'] == '':
++        args.pop('database')
++    if 'driver' in args and args['driver'] == '':
++        args.pop('driver')
+     s = read_command('db.describe', flags='c', table=table, **args)
+     if not s:
+         fatal(_("Unable to describe table <%s>") % table)
+@@ -80,7 +84,7 @@
  
      :return: True for success, False otherwise
      """
@@ -191,7 +202,7 @@ Index: lib/python/script/db.py
      ok = True
      try:
          run_command('db.describe', flags='c', table=table,
-@@ -105,7 +105,7 @@
+@@ -105,7 +109,7 @@
      :return: parsed output of db.connect
      """
      try:
@@ -200,7 +211,7 @@ Index: lib/python/script/db.py
          conn = parse_command('db.connect', flags='g', stderr=nuldev)
          nuldev.close()
      except CalledModuleError:
-@@ -187,7 +187,7 @@
+@@ -187,7 +191,7 @@
      :param str table: name of table to query
      """
      from .vector import vector_db
