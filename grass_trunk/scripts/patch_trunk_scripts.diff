@@ -1658,10 +1658,10 @@ Index: scripts/v.db.droptable/testsuite/test_v_db_droptable.py
 +
 +if __name__ == '__main__':
 +    test()
-Index: scripts/v.db.join/testsuite/data/nc_geology.csv
+Index: scripts/v.db.join/testsuite/nc_geology.csv
 ===================================================================
---- scripts/v.db.join/testsuite/data/nc_geology.csv	(nonexistent)
-+++ scripts/v.db.join/testsuite/data/nc_geology.csv	(working copy)
+--- scripts/v.db.join/testsuite/nc_geology.csv	(nonexistent)
++++ scripts/v.db.join/testsuite/nc_geology.csv	(working copy)
 @@ -0,0 +1,47 @@
 +geol_id,longname,comment
 +Ccl,LOWER CHILHOWEE,"Feldspathic arenite, white to yellowish gray. Minor silty shale, feldspathic siltstone, and conglomerate in lower part. Includes Unicoi Formation of Hot Springs window"
@@ -1733,7 +1733,7 @@ Index: scripts/v.db.join/testsuite/test_v_db_join.py
 +
 +    mapName = 'mygeology'
 +    output = 'nc_geology'
-+    csvFile = 'data/nc_geology.csv'
++    csvFile = 'nc_geology.csv'
 +
 +    @classmethod
 +    def setUpClass(cls):
@@ -2038,10 +2038,10 @@ Index: scripts/v.in.e00/v.in.e00.py
  
      gcore.message(_("An error may appear next which will be ignored..."))
      if gcore.call(['avcimport', filename, e00shortname], stdout=nuldev,
-Index: scripts/v.in.lines/testsuite/data/data.txt
+Index: scripts/v.in.lines/testsuite/data.txt
 ===================================================================
---- scripts/v.in.lines/testsuite/data/data.txt	(nonexistent)
-+++ scripts/v.in.lines/testsuite/data/data.txt	(working copy)
+--- scripts/v.in.lines/testsuite/data.txt	(nonexistent)
++++ scripts/v.in.lines/testsuite/data.txt	(working copy)
 @@ -0,0 +1,12 @@
 +167.846717,-46.516653
 +167.846663,-46.516645
@@ -2075,7 +2075,7 @@ Index: scripts/v.in.lines/testsuite/test_v_in_lines.py
 +class TestVDInLines(TestCase):
 +    """Test v.in.lines script"""
 +
-+    inputFile = 'data/data.txt'
++    inputFile = 'data.txt'
 +    outputMap = 'two_lines'
 +
 +    @classmethod
@@ -2285,10 +2285,10 @@ Index: scripts/v.rast.stats/v.rast.stats.py
  
          f.write("UPDATE %s SET" % fi['table'])
          first_var = 1
-Index: scripts/v.report/testsuite/data/data.txt
+Index: scripts/v.report/testsuite/data.txt
 ===================================================================
---- scripts/v.report/testsuite/data/data.txt	(nonexistent)
-+++ scripts/v.report/testsuite/data/data.txt	(working copy)
+--- scripts/v.report/testsuite/data.txt	(nonexistent)
++++ scripts/v.report/testsuite/data.txt	(working copy)
 @@ -0,0 +1,45 @@
 +cat|OBJECTID|WAKE_ZIPCO|PERIMETER|ZIPCODE_|ZIPCODE_ID|ZIPNAME|ZIPNUM|ZIPCODE|NAME|SHAPE_Leng|SHAPE_Area|area
 +1|1|262493461.286|80746.40038|2|27|CREEDMOOR|27522|CREEDMOOR 27522|CREEDMOOR|80777.650719|262372872.587|2437.53231278035
@@ -2359,8 +2359,8 @@ Index: scripts/v.report/testsuite/test_v_report.py
 +    """Test v.report script"""
 +
 +    mapName = 'zipcodes_wake'
-+    dataFile = 'data/data.txt'
-+    outputFile = 'data/out.txt'
++    dataFile = 'data.txt'
++    outputFile = 'out.txt'
 +
 +    @classmethod
 +    def setUpClass(cls):
@@ -2383,7 +2383,7 @@ Index: scripts/v.report/testsuite/test_v_report.py
 +                              units='hectares')
 +        self.assertModule(module)
 +
-+        f = open('data/out.txt', 'w')
++        f = open(self.outputFile, 'w')
 +        f.write(decode(module.outputs.stdout))
 +        f.close()
 +
@@ -2554,7 +2554,7 @@ Index: scripts/v.unpack/testsuite/test_v_unpack.py
 +
 +    def test_v_pack(self):
 +        """Unpack file test"""
-+        module = SimpleModule('v.unpack', input=self.packFile)
++        module = SimpleModule('v.unpack', input=self.packFile, overwrite=True)
 +        self.assertModule(module)
 +
 +if __name__ == '__main__':
@@ -2563,23 +2563,27 @@ Index: scripts/v.what.strds/testsuite/test_what_strds.py
 ===================================================================
 --- scripts/v.what.strds/testsuite/test_what_strds.py	(revision 72791)
 +++ scripts/v.what.strds/testsuite/test_what_strds.py	(working copy)
-@@ -12,6 +12,7 @@
+@@ -10,8 +10,10 @@
+ """
+ 
  from grass.gunittest.case import TestCase
++from grass.gunittest.main import test
  from grass.gunittest.gmodules import SimpleModule
  import grass.script as gscript
 +from grass.script.utils import decode
  
  
  class TestWhatStrds(TestCase):
-@@ -63,7 +64,7 @@
+@@ -63,8 +65,7 @@
  2|100|200|300|400
  3|100|200|300|400
  """
 -        self.assertLooksLike(output, db_sel.outputs.stdout)
-+        self.assertLooksLike(output, decode(db_sel.outputs.stdout))
++        self.assertMultiLineEqual(output, decode(db_sel.outputs.stdout))
  
  if __name__ == '__main__':
-     from grass.gunittest.main import test
+-    from grass.gunittest.main import test
+     test()
 Index: scripts/v.what.vect/testsuite/test_v_what_vect.py
 ===================================================================
 --- scripts/v.what.vect/testsuite/test_v_what_vect.py	(nonexistent)
