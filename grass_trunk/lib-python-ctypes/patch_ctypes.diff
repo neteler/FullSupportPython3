@@ -1,0 +1,383 @@
+Index: lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(working copy)
+@@ -64,7 +64,7 @@
+ 
+     def parse(self):
+         fd, fname = mkstemp(suffix=".h")
+-        f = os.fdopen(fd, 'w+b')
++        f = os.fdopen(fd, 'w')
+         for header in self.options.other_headers:
+             print('#include <%s>' % header, file=f)
+         for header in self.headers:
+@@ -71,7 +71,7 @@
+             print('#include "%s"' % os.path.abspath(header), file=f)
+         f.flush()
+         f.close()
+-        ctypesparser.CtypesParser.parse(self, fname, None)
++        ctypesparser.CtypesParser.parse(self, fname, False)
+         os.remove(fname)
+ 
+         for name, params, expr, (filename, lineno) in self.saved_macros:
+Index: lib/python/ctypes/ctypesgencore/parser/lex.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/lex.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/lex.py	(working copy)
+@@ -43,8 +43,9 @@
+ import sys
+ import types
+ import collections
++import functools
++from grass.script.utils import decode
+ 
+-
+ if PY3:
+     _meth_func = "__func__"
+     _meth_self = "__self__"
+@@ -255,7 +256,10 @@
+     # input() - Push a new string into the lexer
+     # ------------------------------------------------------------
+     def input(self, s):
+-        if not (isinstance(s, bytes) or isinstance(s, str)):
++        s = decode(s)
++        if not (isinstance(s, bytes) or
++                isinstance(s, str) or
++                isinstance(s, unicode)):
+             raise ValueError("Expected a string")
+         self.lexdata = s
+         self.lexpos = 0
+@@ -682,7 +686,7 @@
+                     error = 1
+                     continue
+                 name, statetype = s
+-                if not isinstance(name, bytes):
++                if not isinstance(name, str):
+                     print("lex: state name %s must be a string" % repr(name))
+                     error = 1
+                     continue
+@@ -730,13 +734,25 @@
+             print("lex: %s not defined as a function or string" % f)
+             error = 1
+ 
++    # sort changed for Py3: https://stackoverflow.com/q/37603757
++
+     # Sort the functions by line number
+     for f in funcsym.values():
+-        f.sort(lambda x, y: cmp(get_func_code(x[1]).co_firstlineno, get_func_code(y[1]).co_firstlineno))
++        if os.sys.version_info.major >= 3:
++            f.sort(key=lambda x: get_func_code(x[1]).co_firstlineno)
++        else:
++            f.sort(key=lambda x, y: cmp(get_func_code(x[1]).co_firstlineno,
++                                        get_func_code(y[1]).co_firstlineno))
+ 
+     # Sort the strings by regular expression length
+     for s in strsym.values():
+-        s.sort(lambda x, y: (len(x[1]) < len(y[1])) - (len(x[1]) > len(y[1])))
++        if os.sys.version_info.major >= 3:
++            s.sort(key=functools.cmp_to_key(lambda x, y:
++                                            (len(x[1]) < len(y[1])) -
++                                            (len(x[1]) > len(y[1]))))
++        else:
++            s.sort(key=lambda x, y: (len(x[1]) < len(y[1])) -
++                                    (len(x[1]) > len(y[1])))
+ 
+     regexs = {}
+ 
+@@ -747,8 +763,8 @@
+         # Add rules defined by functions first
+         for fname, f in funcsym[state]:
+             line = get_func_code(f).co_firstlineno
+-            file = get_func_code(f).co_filename
+-            files[file] = None
++            file_ = get_func_code(f).co_filename
++            files[file_] = None
+             tokname = toknames[fname]
+ 
+             ismethod = isinstance(f, types.MethodType)
+@@ -760,17 +776,20 @@
+                 else:
+                     reqargs = 1
+                 if nargs > reqargs:
+-                    print("%s:%d: Rule '%s' has too many arguments." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' has too many arguments."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+                 if nargs < reqargs:
+-                    print("%s:%d: Rule '%s' requires an argument." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' requires an argument."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+                 if tokname == 'ignore':
+-                    print("%s:%d: Rule '%s' must be defined as a string." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' must be defined as a string."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+@@ -783,18 +802,23 @@
+                     try:
+                         c = re.compile("(?P<%s>%s)" % (f.__name__, f.__doc__), re.VERBOSE | reflags)
+                         if c.match(""):
+-                            print("%s:%d: Regular expression for rule '%s' matches empty string." % (file, line, f.__name__))
++                            print("%s:%d: Regular expression for rule '%s' "
++                                  "matches empty string."
++                                  % (file_, line, f.__name__))
+                             error = 1
+                             continue
+                     except re.error as e:
+-                        print("%s:%d: Invalid regular expression for rule '%s'. %s" % (file, line, f.__name__, e))
++                        print("%s:%d: Invalid regular expression for rule '%s'. %s"
++                              % (file_, line, f.__name__, e))
+                         if '#' in f.__doc__:
+-                            print("%s:%d. Make sure '#' in rule '%s' is escaped with '\\#'." % (file, line, f.__name__))
++                            print("%s:%d. Make sure '#' in rule '%s' is escaped with '\\#'."
++                                  % (file_, line, f.__name__))
+                         error = 1
+                         continue
+ 
+                     if debug:
+-                        print("lex: Adding rule %s -> '%s' (state '%s')" % (f.__name__, f.__doc__, state))
++                        print("lex: Adding rule %s -> '%s' (state '%s')"
++                              % (f.__name__, f.__doc__, state))
+ 
+                 # Okay. The regular expression seemed okay.  Let's append it to the master regular
+                 # expression we're building
+@@ -801,7 +825,8 @@
+ 
+                 regex_list.append("(?P<%s>%s)" % (f.__name__, f.__doc__))
+             else:
+-                print("%s:%d: No regular expression defined for rule '%s'" % (file, line, f.__name__))
++                print("%s:%d: No regular expression defined for rule '%s'"
++                      % (file_, line, f.__name__))
+ 
+         # Now add all of the simple rules
+         for name, r in strsym[state]:
+Index: lib/python/ctypes/ctypesgencore/parser/lextab.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/lextab.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/lextab.py	(working copy)
+@@ -1,8 +1,8 @@
+ # lextab.py. This file automatically created by PLY (version 2.2). Don't edit!
+-_lextokens    = {'RIGHT_OP': None, 'RIGHT_ASSIGN': None, 'DEC_OP': None, 'PP_MACRO_PARAM': None, 'DIV_ASSIGN': None, 'PP_DEFINE': None, 'PP_END_DEFINE': None, 'PP_DEFINE_MACRO_NAME': None, 'HEADER_NAME': None, 'NEWLINE': None, 'CHARACTER_CONSTANT': None, 'PP_STRINGIFY': None, 'AND_ASSIGN': None, 'PTR_OP': None, 'ELLIPSIS': None, 'IDENTIFIER': None, 'ADD_ASSIGN': None, 'PERIOD': None, 'AND_OP': None, 'OTHER': None, 'LPAREN': None, 'LEFT_OP': None, 'LE_OP': None, 'OR_OP': None, 'SUB_ASSIGN': None, 'MOD_ASSIGN': None, 'STRING_LITERAL': None, 'PP_IDENTIFIER_PASTE': None, 'PP_NUMBER': None, 'PP_DEFINE_NAME': None, 'XOR_ASSIGN': None, 'OR_ASSIGN': None, 'GE_OP': None, 'MUL_ASSIGN': None, 'LEFT_ASSIGN': None, 'INC_OP': None, 'NE_OP': None, 'EQ_OP': None}
++_lextokens    = {'HEADER_NAME': None, 'IDENTIFIER': None, 'PP_NUMBER': None, 'CHARACTER_CONSTANT': None, 'STRING_LITERAL': None, 'OTHER': None, 'PTR_OP': None, 'INC_OP': None, 'DEC_OP': None, 'LEFT_OP': None, 'RIGHT_OP': None, 'LE_OP': None, 'GE_OP': None, 'EQ_OP': None, 'NE_OP': None, 'AND_OP': None, 'OR_OP': None, 'MUL_ASSIGN': None, 'DIV_ASSIGN': None, 'MOD_ASSIGN': None, 'ADD_ASSIGN': None, 'SUB_ASSIGN': None, 'LEFT_ASSIGN': None, 'RIGHT_ASSIGN': None, 'AND_ASSIGN': None, 'XOR_ASSIGN': None, 'OR_ASSIGN': None, 'PERIOD': None, 'ELLIPSIS': None, 'LPAREN': None, 'NEWLINE': None, 'PP_DEFINE': None, 'PP_DEFINE_NAME': None, 'PP_DEFINE_MACRO_NAME': None, 'PP_MACRO_PARAM': None, 'PP_STRINGIFY': None, 'PP_IDENTIFIER_PASTE': None, 'PP_END_DEFINE': None}
+ _lexreflags   = 0
+ _lexliterals  = ''
+ _lexstateinfo = {'INITIAL': 'inclusive', 'DEFINE': 'exclusive'}
+-_lexstatere   = {'INITIAL': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\|\\||\\+\\+|>>=|\\|=|\\^=|<<=|\\*=|\\+=|>=|>>|%=|:>|%>|!=|\\*|\\.|==|\\^|--|-=|->|\\||<<|<=|<:|<%|\\)|\\+|\\?|&=|&&|\\[|/=|&|,|:|<|>|~|!|%|-|/|;|=|]|{|}))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_INITIAL_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_INITIAL_identifier', 'INITIAL_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_INITIAL_newline>\\n)|(?P<t_INITIAL_pp_define>\\#define)', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_INITIAL_newline', 'INITIAL_newline'), ('t_INITIAL_pp_define', 'INITIAL_pp_define')])], 'DEFINE': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\|\\||\\+\\+|>>=|\\|=|\\^=|<<=|\\*=|\\+=|>=|>>|%=|:>|%>|!=|\\*|\\.|==|\\^|--|-=|->|\\||<<|<=|<:|<%|\\)|\\+|\\?|&=|&&|\\[|/=|&|,|:|<|>|~|!|%|-|/|;|=|]|{|}))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_DEFINE_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_DEFINE_identifier', 'DEFINE_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_DEFINE_newline>\\n)|(?P<t_DEFINE_pp_param_op>(\\#\\#)|(\\#))', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_DEFINE_newline', 'DEFINE_newline'), ('t_DEFINE_pp_param_op', 'DEFINE_pp_param_op')])]}
++_lexstatere   = {'INITIAL': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\+\\+|\\|\\||>>=|<<=|\\+=|\\*=|\\^=|\\|=|-=|/=|%=|&=|>>|<<|--|->|&&|<=|>=|==|!=|<:|:>|<%|%>|\\)|\\[|\\.|\\+|\\*|\\^|\\||\\?|;|{|}|,|:|=|]|&|!|~|-|/|%|<|>))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_INITIAL_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_INITIAL_identifier', 'INITIAL_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_INITIAL_newline>\\n)|(?P<t_INITIAL_pp_define>\\#define)', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_INITIAL_newline', 'INITIAL_newline'), ('t_INITIAL_pp_define', 'INITIAL_pp_define')])], 'DEFINE': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\+\\+|\\|\\||>>=|<<=|\\+=|\\*=|\\^=|\\|=|-=|/=|%=|&=|>>|<<|--|->|&&|<=|>=|==|!=|<:|:>|<%|%>|\\)|\\[|\\.|\\+|\\*|\\^|\\||\\?|;|{|}|,|:|=|]|&|!|~|-|/|%|<|>))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_DEFINE_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_DEFINE_identifier', 'DEFINE_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_DEFINE_newline>\\n)|(?P<t_DEFINE_pp_param_op>(\\#\\#)|(\\#))', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_DEFINE_newline', 'DEFINE_newline'), ('t_DEFINE_pp_param_op', 'DEFINE_pp_param_op')])]}
+ _lexstateignore = {'INITIAL': ' \t\x0b\x0c\r', 'DEFINE': ' \t\x0b\x0c\r'}
+ _lexstateerrorf = {'INITIAL': 't_INITIAL_error', 'DEFINE': 't_DEFINE_error'}
+Index: lib/python/ctypes/ctypesgencore/parser/pplexer.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/pplexer.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/pplexer.py	(working copy)
+@@ -21,6 +21,7 @@
+ from . import lex
+ from . import yacc
+ from .lex import TOKEN
++from grass.script.utils import encode, decode
+ 
+ 
+ PY2 = True
+@@ -76,17 +77,14 @@
+ class StringLiteral(str):
+ 
+     def __new__(cls, value):
+-        assert value[0] == '"' and value[-1] == '"'
++        value = decode(value)
+         # Unescaping probably not perfect but close enough.
+         try:
+-            value = value[1:-1].decode('string_escape')
++            value = re.sub(r'\\x([0-9a-fA-F])(?![0-9a-fA-F])',
++                           r'\x0\1', value[1:-1])
+         except ValueError as e:
+-            try:
+-                value = re.sub(r'\\x([0-9a-fA-F])(?![0-9a-fA-F])',
+-                               r'\x0\1',
+-                               value[1:-1]).decode('string_escape')
+-            except ValueError as e:
+-                raise ValueError("invalid \\x escape in %s" % value)
++            raise ValueError("invalid \\x escape in %s" % value)
++
+         return str.__new__(cls, value)
+ 
+ # --------------------------------------------------------------------------
+@@ -93,6 +91,7 @@
+ # Token declarations
+ # --------------------------------------------------------------------------
+ 
++
+ punctuators = {
+     # value: (regex, type)
+     r'...': (r'\.\.\.', 'ELLIPSIS'),
+@@ -155,6 +154,7 @@
+         punctuator_regexes.sort(key=lambda a: -len(a))
+     return '(%s)' % '|'.join(punctuator_regexes)
+ 
++
+ # Process line-number directives from the preprocessor
+ # See http://docs.freebsd.org/info/cpp/cpp.info.Output.html
+ DIRECTIVE = r'\#\s+(\d+)\s+"([^"]+)"[ \d]*\n'
+@@ -172,6 +172,7 @@
+     t.type = punctuators[t.value][1]
+     return t
+ 
++
+ IDENTIFIER = sub('{L}({L}|{D})*')
+ 
+ 
+@@ -210,6 +211,7 @@
+         t.type = 'IDENTIFIER'
+     return t
+ 
++
+ FLOAT_LITERAL = sub(r"(?P<p1>{D}+)?(?P<dp>[.]?)(?P<p2>(?(p1){D}*|{D}+))"
+                     r"(?P<exp>(?:[Ee][+-]?{D}+)?)(?P<suf>{FS}?)(?!\w)")
+ 
+@@ -239,6 +241,7 @@
+ 
+     return t
+ 
++
+ INT_LITERAL = sub(r"(?P<p1>(?:0x{H}+)|(?:{D}+))(?P<suf>{IS})")
+ 
+ 
+@@ -264,6 +267,7 @@
+ 
+     return t
+ 
++
+ CHARACTER_CONSTANT = sub(r"L?'(\\.|[^\\'])+'")
+ 
+ 
+@@ -272,6 +276,7 @@
+     t.type = 'CHARACTER_CONSTANT'
+     return t
+ 
++
+ STRING_LITERAL = sub(r'L?"(\\.|[^\\"])*"')
+ 
+ 
+@@ -278,7 +283,7 @@
+ @TOKEN(STRING_LITERAL)
+ def t_ANY_string_literal(t):
+     t.type = 'STRING_LITERAL'
+-    t.value = StringLiteral(t.value)
++    t.value = StringLiteral(encode(t.value))
+     return t
+ 
+ 
+@@ -338,4 +343,5 @@
+     t.lexer.lexpos += 1  # Skip it if it's an error in a #define
+     return t
+ 
++
+ t_ANY_ignore = ' \t\v\f\r'
+Index: lib/python/ctypes/ctypesgencore/parser/preprocessor.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(working copy)
+@@ -24,7 +24,9 @@
+ from . import yacc
+ from .lex import TOKEN
+ 
++from grass.script.utils import decode
+ 
++
+ # --------------------------------------------------------------------------
+ # Lexers
+ # --------------------------------------------------------------------------
+@@ -169,6 +171,8 @@
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+         ppout, pperr = pp.communicate()
++        ppout = decode(ppout)
++        pperr = decode(pperr)
+ 
+         for line in pperr.split("\n"):
+             if line:
+@@ -207,7 +211,7 @@
+             self.cparser.handle_status("Saving preprocessed headers to %s." %
+                                        self.options.save_preprocessed_headers)
+             try:
+-                f = file(self.options.save_preprocessed_headers, "w")
++                f = open(self.options.save_preprocessed_headers, "w")
+                 f.write(text)
+                 f.close()
+             except IOError:
+Index: lib/python/ctypes/ctypesgencore/parser/yacc.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/yacc.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/yacc.py	(working copy)
+@@ -2135,7 +2135,7 @@
+     error = 0
+ 
+     # Add parsing method to signature
+-    Signature.update(method)
++    Signature.update(method.encode())
+ 
+     # If a "module" parameter was supplied, extract its dictionary.
+     # Note: a module may in fact be an instance as well.
+Index: lib/python/ctypes/ctypesgencore/printer/printer.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/printer/printer.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/printer/printer.py	(working copy)
+@@ -23,7 +23,7 @@
+     def __init__(self, outpath, options, data):
+         status_message("Writing to %s." % outpath)
+ 
+-        self.file = file(outpath, "w")
++        self.file = open(outpath, "w")
+         self.options = options
+ 
+         if self.options.strip_build_path and \
+@@ -110,7 +110,7 @@
+         if self.options.header_template:
+             path = self.options.header_template
+             try:
+-                template_file = file(path, "r")
++                template_file = open(path, "r")
+             except IOError:
+                 error_message("Cannot load header template from file \"%s\" "
+                               " - using default template." % path, cls='missing-file')
+@@ -117,7 +117,7 @@
+ 
+         if not template_file:
+             path = path_to_local_file("defaultheader.py")
+-            template_file = file(path, "r")
++            template_file = open(path, "r")
+ 
+         template_subs = self.template_subs()
+         self.file.write(template_file.read() % template_subs)
+@@ -129,7 +129,7 @@
+ 
+         print("# Begin preamble", file=self.file)
+         print(file=self.file)
+-        preamble_file = file(path, "r")
++        preamble_file = open(path, "r")
+         self.file.write(preamble_file.read())
+         preamble_file.close()
+         print(file=self.file)
+@@ -143,7 +143,7 @@
+         print(file=self.file)
+         path = path_to_local_file("libraryloader.py",
+                                   ctypesgencore.libraryloader)
+-        loader_file = file(path, "r")
++        loader_file = open(path, "r")
+         self.file.write(loader_file.read())
+         loader_file.close()
+         print(file=self.file)
+@@ -293,7 +293,7 @@
+ 
+     def insert_file(self, filename):
+         try:
+-            inserted_file = file(filename, "r")
++            inserted_file = open(filename, "r")
+         except IOError:
+             error_message("Cannot open file \"%s\". Skipped it." % filename,
+                           cls='missing-file')

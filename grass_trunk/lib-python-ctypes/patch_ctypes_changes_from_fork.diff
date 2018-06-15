@@ -1,0 +1,2190 @@
+Index: lib/python/ctypes/ctypesgen.py
+===================================================================
+--- lib/python/ctypes/ctypesgen.py	(revision 72833)
++++ lib/python/ctypes/ctypesgen.py	(working copy)
+@@ -93,6 +93,15 @@
+                   default=None, help='regular expression for symbols to always include')
+     op.add_option('-x', '--exclude-symbols', dest='exclude_symbols',
+                   default=None, help='regular expression for symbols to exclude')
++    op.add_option('', '--no-stddef-types', action='store_true',
++                  dest='no_stddef_types', default=False,
++                  help='Do not support extra C types from stddef.h')
++    op.add_option('', '--no-gnu-types', action='store_true',
++                  dest='no_gnu_types', default=False,
++                  help='Do not support extra GNU C types')
++    op.add_option('', '--no-python-types', action='store_true',
++                  dest='no_python_types', default=False,
++                  help='Do not support extra C types built in to Python')
+ 
+     # Printer options
+     op.add_option('', '--header-template', dest='header_template', default=None,
+@@ -104,6 +113,9 @@
+     op.add_option('', '--insert-file', dest='inserted_files', default=[],
+                   action='append', metavar='FILENAME',
+                   help='Add the contents of FILENAME to the end of the wrapper file.')
++    op.add_option('', '--output-language', dest='output_language', metavar='LANGUAGE',
++                  default='python',
++                  help="Choose output language (`json' or `python' [default])")
+ 
+     # Error options
+     op.add_option('', "--all-errors", action="store_true", default=False,
+@@ -135,6 +147,17 @@
+     if len(options.libraries) == 0:
+         msgs.warning_message('No libraries specified', cls='usage')
+ 
++    # Check output language
++    printer = None
++    if options.output_language == "python":
++        printer = ctypesgencore.printer.WrapperPrinter
++    elif options.output_language == "json":
++        printer = ctypesgencore.printer_json.WrapperPrinter
++    else:
++        msgs.error_message("No such output language `" +
++                           options.output_language + "'", cls='usage')
++        sys.exit(1)
++
+     # Step 1: Parse
+     descriptions = ctypesgencore.parser.parse(options.headers, options)
+ 
+Index: lib/python/ctypes/ctypesgencore/ctypedescs.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/ctypedescs.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/ctypedescs.py	(working copy)
+@@ -57,6 +57,19 @@
+     ('va_list', True, 0): 'c_void_p',
+ }
+ 
++ctypes_type_map_python_builtin = {
++    ('int',     True,   2): 'c_longlong',
++    ('int',     False,  2): 'c_ulonglong',
++    ('size_t',  True,   0): 'c_size_t',
++    ('apr_int64_t', True, 0): 'c_int64',
++    ('off64_t', True,   0): 'c_int64',
++    ('apr_uint64_t', True, 0): 'c_uint64',
++    ('wchar_t', True,   0): 'c_wchar',
++    ('ptrdiff_t', True,  0): 'c_ptrdiff_t',  # Requires definition in preamble
++    ('ssize_t', True,   0): 'c_ptrdiff_t',  # Requires definition in preamble
++    ('va_list', True,   0): 'c_void_p',
++}
++
+ # This protocol is used for walking type trees.
+ 
+ 
+@@ -230,11 +243,31 @@
+                                 self.count.py_string(False))
+ 
+ 
++class CtypesNoErrorCheck(object):
++
++    def py_string(self):
++        return 'None'
++
++    def __bool__(self):
++        return False
++    __nonzero__ = __bool__
++
++
++class CtypesPointerCast(object):
++
++    def __init__(self, target):
++        self.target = target
++
++    def py_string(self):
++        return 'lambda v,*a : cast(v, {})'.format(self.target.py_string())
++
++
+ class CtypesFunction(CtypesType):
+ 
+     def __init__(self, restype, parameters, variadic=False):
+         CtypesType.__init__(self)
+         self.restype = restype
++        self.errcheck = CtypesNoErrorCheck()
+ 
+         # Don't allow POINTER(None) (c_void_p) as a restype... causes errors
+         # when ctypes automagically returns it as an int.
+@@ -242,12 +275,17 @@
+         # you can make it any arbitrary type.
+         if isinstance(self.restype, CtypesPointer) and \
+            isinstance(self.restype.destination, CtypesSimple) and \
+-           self.restype.destination.name == 'None':
+-            self.restype = CtypesPointer(CtypesSpecial('c_void'), ())
++           self.restype.destination.name == 'void':
++            # we will provide a means of converting this to a c_void_p
++            self.restype = CtypesPointer(CtypesSpecial('c_ubyte'), ())
++            self.errcheck = CtypesPointerCast(CtypesSpecial('c_void_p'))
+ 
+-        # Return 'ReturnString' instead of simply 'String'
++        # Return "String" instead of "POINTER(c_char)"
+         if self.restype.py_string() == 'POINTER(c_char)':
+-            self.restype = CtypesSpecial('ReturnString')
++            if 'const' in self.restype.qualifiers:
++                self.restype = CtypesSpecial('c_char_p')
++            else:
++                self.restype = CtypesSpecial('String')
+ 
+         self.argtypes = [remove_function_pointer(p) for p in parameters]
+         self.variadic = variadic
+@@ -273,9 +311,10 @@
+ 
+ class CtypesStruct(CtypesType):
+ 
+-    def __init__(self, tag, variety, members, src=None):
++    def __init__(self, tag, packed, variety, members, src=None):
+         CtypesType.__init__(self)
+         self.tag = tag
++        self.packed = packed
+         self.variety = variety  # "struct" or "union"
+         self.members = members
+ 
+Index: lib/python/ctypes/ctypesgencore/descriptions.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/descriptions.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/descriptions.py	(working copy)
+@@ -119,10 +119,11 @@
+ class StructDescription(Description):
+     """Simple container class for a structure or union definition."""
+ 
+-    def __init__(self, tag, variety, members, opaque, ctype, src=None):
++    def __init__(self, tag, packed, variety, members, opaque, ctype, src=None):
+         Description.__init__(self, src)
+         # The name of the structure minus the "struct" or "union"
+         self.tag = tag
++        self.packed = packed
+         # A string "struct" or "union"
+         self.variety = variety
+         # A list of pairs of (name,ctype)
+@@ -167,7 +168,7 @@
+ class FunctionDescription(Description):
+     """Simple container class for a C function."""
+ 
+-    def __init__(self, name, restype, argtypes, variadic=False, src=None):
++    def __init__(self, name, restype, argtypes, errcheck, variadic=False, src=None):
+         Description.__init__(self, src)
+         # Name, a string
+         self.name = name
+@@ -177,6 +178,8 @@
+         self.restype = restype
+         # A list of ctypes representing the argument types
+         self.argtypes = argtypes
++        # An optional error checker/caster
++        self.errcheck = errcheck
+         # Does this function accept a variable number of arguments?
+         self.variadic = variadic
+ 
+Index: lib/python/ctypes/ctypesgencore/expressions.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/expressions.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/expressions.py	(working copy)
+@@ -7,7 +7,7 @@
+ '''
+ 
+ import keyword
+-
++import sys
+ from .ctypedescs import *
+ 
+ 
+@@ -84,10 +84,13 @@
+         neg_inf = ()
+ 
+     def py_string(self, can_be_ctype):
+-        if self.value == ConstantExpressionNode.pos_inf:
+-            return "float('inf')"
+-        elif self.value == ConstantExpressionNode.neg_inf:
+-            return "float('-inf')"
++        if (sys.platform != 'win32' or (sys.platform == 'win32' and
++                                        sys.version_info >= (2, 6))):
++            # Windows python did not get infinity support until 2.6
++            if self.value == ConstantExpressionNode.pos_inf:
++                return "float('inf')"
++            elif self.value == ConstantExpressionNode.neg_inf:
++                return "float('-inf')"
+         return repr(self.value)
+ 
+ 
+Index: lib/python/ctypes/ctypesgencore/libraryloader.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/libraryloader.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/libraryloader.py	(working copy)
+@@ -36,6 +36,7 @@
+ import os.path
+ import re
+ import sys
++import platform
+ 
+ import ctypes
+ import ctypes.util
+@@ -136,6 +137,7 @@
+ 
+         dirs.extend(self.other_dirs)
+         dirs.append(".")
++        dirs.append(os.path.dirname(__file__))
+ 
+         if hasattr(sys, 'frozen') and sys.frozen == 'macosx_app':
+             dirs.append(os.path.join(
+@@ -171,6 +173,7 @@
+                 directories.extend(os.environ[name].split(os.pathsep))
+         directories.extend(self.other_dirs)
+         directories.append(".")
++        directories.append(os.path.dirname(__file__))
+ 
+         try:
+             directories.extend([dir.strip() for dir in open('/etc/ld.so.conf')])
+@@ -177,7 +180,21 @@
+         except IOError:
+             pass
+ 
+-        directories.extend(['/lib', '/usr/lib', '/lib64', '/usr/lib64'])
++        unix_lib_dirs_list = ['/lib', '/usr/lib', '/lib64', '/usr/lib64']
++        if sys.platform.startswith('linux'):
++            # Try and support multiarch work in Ubuntu
++            # https://wiki.ubuntu.com/MultiarchSpec
++            bitage = platform.architecture()[0]
++            if bitage.startswith('32'):
++                # Assume Intel/AMD x86 compat
++                unix_lib_dirs_list += ['/lib/i386-linux-gnu', '/usr/lib/i386-linux-gnu']
++            elif bitage.startswith('64'):
++                # Assume Intel/AMD x86 compat
++                unix_lib_dirs_list += ['/lib/x86_64-linux-gnu', '/usr/lib/x86_64-linux-gnu']
++            else:
++                # guess...
++                unix_lib_dirs_list += glob.glob('/lib/*linux-gnu')
++        directories.extend(unix_lib_dirs_list)
+ 
+         cache = {}
+         lib_re = re.compile(r'lib(.*)\.s[ol]')
+@@ -236,6 +253,28 @@
+ class WindowsLibraryLoader(LibraryLoader):
+     name_formats = ["%s.dll", "lib%s.dll"]
+ 
++    def load_library(self, libname):
++        try:
++            result = LibraryLoader.load_library(self, libname)
++        except ImportError:
++            result = None
++            if os.path.sep not in libname:
++                for name in self.name_formats:
++                    try:
++                        result = getattr(ctypes.cdll, name % libname)
++                        if result:
++                            break
++                    except WindowsError:
++                        result = None
++            if result is None:
++                try:
++                    result = getattr(ctypes.cdll, libname)
++                except WindowsError:
++                    result = None
++            if result is None:
++                raise ImportError("%s not found." % libname)
++        return result
++
+     def load(self, path):
+         return _WindowsLibrary(path)
+ 
+@@ -242,6 +281,9 @@
+     def getplatformpaths(self, libname):
+         if os.path.sep not in libname:
+             for name in self.name_formats:
++                dll_in_current_dir = os.path.abspath(name % libname)
++                if os.path.exists(dll_in_current_dir):
++                    yield dll_in_current_dir
+                 path = ctypes.util.find_library(name % libname)
+                 if path:
+                     yield path
+@@ -261,7 +303,16 @@
+ 
+ 
+ def add_library_search_dirs(other_dirs):
+-    loader.other_dirs = other_dirs
++    """
++    Add libraries to search paths.
++    If library paths are relative, convert them to absolute with respect to this
++    file's directory
++    """
++    THIS_DIR = os.path.dirname(__file__)
++    for F in other_dirs:
++        if not os.path.isabs(F):
++            F = os.path.abspath(os.path.join(THIS_DIR, F))
++        loader.other_dirs.append(F)
+ 
+ load_library = loader.load_library
+ 
+Index: lib/python/ctypes/ctypesgencore/messages.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/messages.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/messages.py	(working copy)
+@@ -22,10 +22,20 @@
+ from __future__ import print_function
+ 
+ import sys
++import logging
+ 
+ __all__ = ["error_message", "warning_message", "status_message"]
+ 
++log = logging.getLogger('ctypesgen')
++ch = logging.StreamHandler()  # use stdio
++logging_fmt_str = "%(levelname)s: %(message)s"
++formatter = logging.Formatter(logging_fmt_str)
++ch.setFormatter(formatter)
++log.addHandler(ch)
++# default level that ctypesgen was using with original version
++log.setLevel(logging.INFO)
+ 
++
+ def error_message(msg, cls=None):
+     print("Error: %s" % msg)
+ 
+Index: lib/python/ctypes/ctypesgencore/options.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/options.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/options.py	(working copy)
+@@ -32,7 +32,11 @@
+     "other_known_names": [],
+     "include_macros": True,
+     "libraries": [],
+-    "strip_build_path": None
++    "strip_build_path": None,
++    "output_language": "python",
++    "no_stddef_types": False,
++    "no_gnu_types": False,
++    "no_python_types": False,
+ }
+ 
+ 
+Index: lib/python/ctypes/ctypesgencore/parser/cdeclarations.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/cdeclarations.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/cdeclarations.py	(working copy)
+@@ -130,8 +130,9 @@
+ 
+ class StructTypeSpecifier(object):
+ 
+-    def __init__(self, is_union, tag, declarations):
++    def __init__(self, is_union, is_packed, tag, declarations):
+         self.is_union = is_union
++        self.is_packed = is_packed
+         self.tag = tag
+         self.declarations = declarations
+ 
+@@ -140,6 +141,8 @@
+             s = 'union'
+         else:
+             s = 'struct'
++        if self.is_packed:
++            s += ' __attribute__((packed))'
+         if self.tag:
+             s += ' %s' % self.tag
+         if self.declarations:
+Index: lib/python/ctypes/ctypesgencore/parser/cgrammar.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/cgrammar.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/cgrammar.py	(working copy)
+@@ -20,6 +20,10 @@
+ import warnings
+ 
+ from . import cdeclarations
++try:
++    from . import ctypesparser
++except:
++    import ctypesparser
+ import ctypesgencore.expressions as expressions
+ from . import preprocessor
+ from . import yacc
+@@ -40,20 +44,22 @@
+     'AND_ASSIGN', 'XOR_ASSIGN', 'OR_ASSIGN', 'PERIOD', 'TYPE_NAME',
+ 
+     'TYPEDEF', 'EXTERN', 'STATIC', 'AUTO', 'REGISTER',
+-    'CHAR', 'SHORT', 'INT', 'LONG', 'SIGNED', 'UNSIGNED', 'FLOAT', 'DOUBLE',
++    '_BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'SIGNED', 'UNSIGNED', 'FLOAT', 'DOUBLE',
+     'CONST', 'VOLATILE', 'VOID',
+     'STRUCT', 'UNION', 'ENUM', 'ELLIPSIS',
+ 
+     'CASE', 'DEFAULT', 'IF', 'ELSE', 'SWITCH', 'WHILE', 'DO', 'FOR', 'GOTO',
+-    'CONTINUE', 'BREAK', 'RETURN', '__ASM__'
++    'CONTINUE', 'BREAK', 'RETURN', '__ASM__', '__ATTRIBUTE__', 'PACKED',
++    'ALIGNED', 'TRANSPARENT_UNION',
+ )
+ 
+ keywords = [
+-    'auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do',
++    'auto', '_Bool', 'break', 'case', 'char', 'const', 'continue', 'default', 'do',
+     'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int',
+     'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static',
+     'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile',
+-    'while', '__asm__'
++    'while', '__asm__', '__attribute__', 'packed', 'aligned',
++    'transparent_union',
+ ]
+ 
+ 
+@@ -618,6 +624,7 @@
+ 
+ def p_type_specifier(p):
+     '''type_specifier : VOID
++                      | _BOOL
+                       | CHAR
+                       | SHORT
+                       | INT
+@@ -637,8 +644,19 @@
+         p[0] = cdeclarations.TypeSpecifier(p[1])
+ 
+ 
++class Attribs(dict):
++    def __init__(self, packed=False, aligned=False, transparent_union=False):
++        super(Attribs, self).__init__(
++          packed=packed, aligned=aligned, transparent_union=transparent_union,
++        )
++        self.__dict__ = self
++
++
+ def p_struct_or_union_specifier(p):
+-    '''struct_or_union_specifier : struct_or_union IDENTIFIER '{' struct_declaration_list '}'
++    '''struct_or_union_specifier : struct_or_union gcc_attribs IDENTIFIER '{' struct_declaration_list '}'
++         | struct_or_union gcc_attribs TYPE_NAME '{' struct_declaration_list '}'
++         | struct_or_union gcc_attribs '{' struct_declaration_list '}'
++         | struct_or_union IDENTIFIER '{' struct_declaration_list '}'
+          | struct_or_union TYPE_NAME '{' struct_declaration_list '}'
+          | struct_or_union '{' struct_declaration_list '}'
+          | struct_or_union IDENTIFIER
+@@ -647,13 +665,25 @@
+     # The TYPE_NAME ones are dodgy, needed for Apple headers
+     # CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Files.h.
+     # CoreServices.framework/Frameworks/OSServices.framework/Headers/Power.h
+-    if len(p) == 3:
+-        p[0] = cdeclarations.StructTypeSpecifier(p[1], p[2], None)
+-    elif p[2] == '{':
+-        p[0] = cdeclarations.StructTypeSpecifier(p[1], '', p[3])
++    packed = False
++    if len(p) == 3:  # struct <id/typname>
++        p[0] = cdeclarations.StructTypeSpecifier(p[1], False, p[2], None)
+     else:
+-        p[0] = cdeclarations.StructTypeSpecifier(p[1], p[2], p[4])
++        if type(p[2]) is Attribs:
++            attribs = p[2]
++            if p[3] == '{':
++                tag, decl = '', p[4]
++            else:
++                tag, decl = p[3], p[5]
++        else:
++            attribs = Attribs()
++            if p[2] == '{':
++                tag, decl = '', p[3]
++            else:
++                tag, decl = p[2], p[4]
+ 
++        p[0] = cdeclarations.StructTypeSpecifier(p[1], attribs.packed, tag, decl)
++
+     p[0].filename = p.slice[0].filename
+     p[0].lineno = p.slice[0].lineno
+ 
+@@ -665,6 +695,21 @@
+     p[0] = p[1] == 'union'
+ 
+ 
++def p_gcc_attribs(p):
++    '''gcc_attribs : __ATTRIBUTE__ '(' '(' struct_attribute ')' ')'
++    '''
++    p[0] = Attribs()
++    p[0].packed = False if len(p) == 1 else p[4] == 'packed'
++
++
++def p_struct_attribute(p):
++    '''struct_attribute : PACKED
++                        | TRANSPARENT_UNION
++                        | ALIGNED
++    '''
++    p[0] = p[1]
++
++
+ def p_struct_declaration_list(p):
+     '''struct_declaration_list : struct_declaration
+                                | struct_declaration_list struct_declaration
+@@ -688,6 +733,11 @@
+             cdeclarations.apply_specifiers(p[1], declaration)
+             declaration.declarator = declarator
+             r += (declaration,)
++    else:
++        # anonymous field (C11/GCC extension)
++        declaration = cdeclarations.Declaration()
++        cdeclarations.apply_specifiers(p[1], declaration)
++        r = (declaration,)
+     p[0] = r
+ 
+ 
+@@ -909,7 +959,6 @@
+     '''type_name : specifier_qualifier_list
+                  | specifier_qualifier_list abstract_declarator
+     '''
+-    from . import ctypesparser
+     typ = p[1]
+     if len(p) == 3:
+         declarator = p[2]
+@@ -919,8 +968,8 @@
+     declaration = cdeclarations.Declaration()
+     declaration.declarator = declarator
+     cdeclarations.apply_specifiers(typ, declaration)
+-    ctype = ctypesparser.get_ctypes_type(declaration.type,
+-                                         declaration.declarator)
++    ctype = p.parser.cparser.get_ctypes_type(declaration.type,
++                                             declaration.declarator)
+     p[0] = ctype
+ 
+ 
+Index: lib/python/ctypes/ctypesgencore/parser/cparser.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/cparser.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/cparser.py	(working copy)
+@@ -63,7 +63,9 @@
+                 t.type = t.value.upper()
+             elif t.type == 'IDENTIFIER' and t.value in self.type_names:
+                 if (self.pos < 2 or self.tokens[self.pos - 2].type not in
+-                        ('ENUM', 'STRUCT', 'UNION')):
++                        ('VOID', '_BOOL', 'CHAR', 'SHORT', 'INT', 'LONG',
++                         'FLOAT', 'DOUBLE', 'SIGNED', 'UNSIGNED', 'ENUM',
++                         'STRUCT', 'UNION', 'TYPE_NAME')):
+                     t.type = 'TYPE_NAME'
+ 
+             t.lexer = self
+@@ -101,13 +103,13 @@
+         self.parser.cparser = self
+ 
+         self.lexer = CLexer(self)
+-        if stddef_types:
++        if not options.no_stddef_types:
+             self.lexer.type_names.add('wchar_t')
+             self.lexer.type_names.add('ptrdiff_t')
+             self.lexer.type_names.add('size_t')
+-        if gnu_types:
++        if not options.no_gnu_types:
+             self.lexer.type_names.add('__builtin_va_list')
+-        if sys.platform == 'win32':
++        if sys.platform == 'win32' and not options.no_python_types:
+             self.lexer.type_names.add('__int64')
+ 
+     def parse(self, filename, debug=False):
+@@ -212,5 +214,17 @@
+     def handle_declaration(self, declaration, filename, lineno):
+         print(declaration)
+ 
++    def get_ctypes_type(self, typ, declarator):
++        return typ
++
++    def handle_define_unparseable(self, name, params, value, filename, lineno):
++        if params:
++            original_string = "#define %s(%s) %s" % \
++                (name, ",".join(params), " ".join(value))
++        else:
++            original_string = "#define %s %s" % \
++                (name, " ".join(value))
++        print(original_string)
++
+ if __name__ == '__main__':
+     DebugCParser().parse(sys.argv[1], debug=True)
+Index: lib/python/ctypes/ctypesgencore/parser/ctypesparser.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/ctypesparser.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/ctypesparser.py	(working copy)
+@@ -18,154 +18,177 @@
+ from ctypesgencore.expressions import *
+ 
+ 
+-def get_ctypes_type(typ, declarator, check_qualifiers=False):
+-    signed = True
+-    typename = 'int'
+-    longs = 0
+-    t = None
++def make_enum_from_specifier(specifier):
++    tag = specifier.tag
+ 
+-    for specifier in typ.specifiers:
+-        if isinstance(specifier, StructTypeSpecifier):
+-            t = make_struct_from_specifier(specifier)
+-        elif isinstance(specifier, EnumSpecifier):
+-            t = make_enum_from_specifier(specifier)
+-        elif specifier == 'signed':
+-            signed = True
+-        elif specifier == 'unsigned':
+-            signed = False
+-        elif specifier == 'long':
+-            longs += 1
++    enumerators = []
++    last_name = None
++    for e in specifier.enumerators:
++        if e.expression:
++            value = e.expression
+         else:
+-            typename = str(specifier)
++            if last_name:
++                value = BinaryExpressionNode("addition", (lambda x, y: x + y),
++                                             "(%s + %s)", (False, False),
++                                             IdentifierExpressionNode(
++                                                 last_name),
++                                             ConstantExpressionNode(1))
++            else:
++                value = ConstantExpressionNode(0)
+ 
+-    if not t:
+-        # It is a numeric type of some sort
+-        if (typename, signed, longs) in ctypes_type_map:
+-            t = CtypesSimple(typename, signed, longs)
++        enumerators.append((e.name, value))
++        last_name = e.name
+ 
+-        elif signed and not longs:
+-            t = CtypesTypedef(typename)
++    return CtypesEnum(tag, enumerators,
++                      src=(specifier.filename, specifier.lineno))
+ 
+-        else:
+-            name = " ".join(typ.specifiers)
+-            if typename in [x[0] for x in ctypes_type_map.keys()]:
+-                # It's an unsupported variant of a builtin type
+-                error = "Ctypes does not support the type \"%s\"." % name
+-            else:
+-                error = "Ctypes does not support adding additional " \
+-                    "specifiers to typedefs, such as \"%s\"" % name
+-            t = CtypesTypedef(name)
+-            t.error(error, cls='unsupported-type')
+ 
+-        if declarator and declarator.bitfield:
+-            t = CtypesBitfield(t, declarator.bitfield)
++def get_decl_id(decl):
++    """Return the identifier of a given declarator"""
++    while isinstance(decl, Pointer):
++        decl = decl.pointer
++    p_name = ""
++    if decl is not None and decl.identifier is not None:
++        p_name = decl.identifier
++    return p_name
+ 
+-    qualifiers = []
+-    qualifiers.extend(typ.qualifiers)
+-    while declarator and declarator.pointer:
+-        if declarator.parameters is not None:
+-            variadic = "..." in declarator.parameters
+ 
+-            params = []
+-            for param in declarator.parameters:
+-                if param == "...":
+-                    break
+-                params.append(get_ctypes_type(param.type, param.declarator))
+-            t = CtypesFunction(t, params, variadic)
++class CtypesParser(CParser):
++    '''Parse a C file for declarations that can be used by ctypes.
+ 
+-        a = declarator.array
+-        while a:
+-            t = CtypesArray(t, a.size)
+-            a = a.array
++    Subclass and override the handle_ctypes_* methods.
++    '''
+ 
+-        qualifiers.extend(declarator.qualifiers)
++    def __init__(self, options):
++        super(CtypesParser, self).__init__(options)
++        self.type_map = ctypes_type_map
++        if not options.no_python_types:
++            self.type_map.update(ctypes_type_map_python_builtin)
+ 
+-        t = CtypesPointer(t, declarator.qualifiers)
++    def make_struct_from_specifier(self, specifier):
++        variety = {True: "union", False: "struct"}[specifier.is_union]
++        tag = specifier.tag
+ 
+-        declarator = declarator.pointer
++        if specifier.declarations:
++            members = []
++            for declaration in specifier.declarations:
++                t = self.get_ctypes_type(declaration.type,
++                                         declaration.declarator,
++                                         check_qualifiers=True)
++                declarator = declaration.declarator
++                if declarator is None:
++                    # Anonymous field in nested union/struct (C11/GCC).
++                    name = None
++                else:
++                    while declarator.pointer:
++                        declarator = declarator.pointer
++                    name = declarator.identifier
++                members.append((name, remove_function_pointer(t)))
++        else:
++            members = None
+ 
+-    if declarator and declarator.parameters is not None:
+-        variadic = "..." in declarator.parameters
++        return CtypesStruct(tag, specifier.is_packed, variety, members,
++                            src=(specifier.filename, specifier.lineno))
+ 
+-        params = []
+-        for param in declarator.parameters:
+-            if param == "...":
+-                break
+-            params.append(get_ctypes_type(param.type, param.declarator))
+-        t = CtypesFunction(t, params, variadic)
++    def get_ctypes_type(self, typ, declarator, check_qualifiers=False):
++        signed = True
++        typename = 'int'
++        longs = 0
++        t = None
+ 
+-    if declarator:
+-        a = declarator.array
+-        while a:
+-            t = CtypesArray(t, a.size)
+-            a = a.array
++        for specifier in typ.specifiers:
++            if isinstance(specifier, StructTypeSpecifier):
++                t = self.make_struct_from_specifier(specifier)
++            elif isinstance(specifier, EnumSpecifier):
++                t = make_enum_from_specifier(specifier)
++            elif specifier == 'signed':
++                signed = True
++            elif specifier == 'unsigned':
++                signed = False
++            elif specifier == 'long':
++                longs += 1
++            else:
++                typename = str(specifier)
+ 
+-    if isinstance(t, CtypesPointer) and \
+-       isinstance(t.destination, CtypesSimple) and \
+-       t.destination.name == "char" and \
+-       t.destination.signed:
+-        t = CtypesSpecial("String")
++        if not t:
++            # It is a numeric type of some sort
++            if (typename, signed, longs) in self.type_map:
++                t = CtypesSimple(typename, signed, longs)
+ 
+-    return t
++            elif signed and not longs:
++                t = CtypesTypedef(typename)
+ 
++            else:
++                name = " ".join(typ.specifiers)
++                if typename in [x[0] for x in self.type_map.keys()]:
++                    # It's an unsupported variant of a builtin type
++                    error = "Ctypes does not support the type \"%s\"." % name
++                else:
++                    error = "Ctypes does not support adding additional " \
++                        "specifiers to typedefs, such as \"%s\"" % name
++                t = CtypesTypedef(name)
++                t.error(error, cls='unsupported-type')
+ 
+-def make_struct_from_specifier(specifier):
+-    variety = {True: "union", False: "struct"}[specifier.is_union]
+-    tag = specifier.tag
++            if declarator and declarator.bitfield:
++                t = CtypesBitfield(t, declarator.bitfield)
+ 
+-    if specifier.declarations:
+-        members = []
+-        for declaration in specifier.declarations:
+-            t = get_ctypes_type(declaration.type,
+-                                declaration.declarator,
+-                                check_qualifiers=True)
+-            declarator = declaration.declarator
+-            if declarator is None:
+-                # XXX TEMPORARY while struct with no typedef not filled in
+-                break
+-            while declarator.pointer:
+-                declarator = declarator.pointer
+-            name = declarator.identifier
+-            members.append((name, remove_function_pointer(t)))
+-    else:
+-        members = None
++        qualifiers = []
++        qualifiers.extend(typ.qualifiers)
++        while declarator and declarator.pointer:
++            if declarator.parameters is not None:
++                variadic = "..." in declarator.parameters
+ 
+-    return CtypesStruct(tag, variety, members,
+-                        src=(specifier.filename, specifier.lineno))
++                params = []
++                for param in declarator.parameters:
++                    if param == "...":
++                        break
++                    param_name = get_decl_id(param.declarator)
++                    ct = self.get_ctypes_type(param.type, param.declarator)
++                    ct.identifier = param_name
++                    params.append(ct)
++                t = CtypesFunction(t, params, variadic)
+ 
++            a = declarator.array
++            while a:
++                t = CtypesArray(t, a.size)
++                a = a.array
+ 
+-def make_enum_from_specifier(specifier):
+-    tag = specifier.tag
++            qualifiers.extend(declarator.qualifiers)
+ 
+-    enumerators = []
+-    last_name = None
+-    for e in specifier.enumerators:
+-        if e.expression:
+-            value = e.expression
+-        else:
+-            if last_name:
+-                value = BinaryExpressionNode("addition", (lambda x, y: x + y),
+-                                             "(%s + %s)", (False, False),
+-                                             IdentifierExpressionNode(last_name),
+-                                             ConstantExpressionNode(1))
+-            else:
+-                value = ConstantExpressionNode(0)
++            t = CtypesPointer(t, tuple(typ.qualifiers) +
++                              tuple(declarator.qualifiers))
+ 
+-        enumerators.append((e.name, value))
+-        last_name = e.name
++            declarator = declarator.pointer
+ 
+-    return CtypesEnum(tag, enumerators,
+-                      src=(specifier.filename, specifier.lineno))
++        if declarator and declarator.parameters is not None:
++            variadic = "..." in declarator.parameters
+ 
++            params = []
++            for param in declarator.parameters:
++                if param == "...":
++                    break
++                param_name = get_decl_id(param.declarator)
++                ct = self.get_ctypes_type(param.type, param.declarator)
++                ct.identifier = param_name
++                params.append(ct)
++            t = CtypesFunction(t, params, variadic)
+ 
+-class CtypesParser(CParser):
+-    '''Parse a C file for declarations that can be used by ctypes.
++        if declarator:
++            a = declarator.array
++            while a:
++                t = CtypesArray(t, a.size)
++                a = a.array
+ 
+-    Subclass and override the handle_ctypes_* methods.
+-    '''
++        if (isinstance(t, CtypesPointer) and
++            isinstance(t.destination, CtypesSimple) and
++            t.destination.name == "char" and
++                t.destination.signed):
++            t = CtypesSpecial("String")
+ 
++        return t
++
+     def handle_declaration(self, declaration, filename, lineno):
+-        t = get_ctypes_type(declaration.type, declaration.declarator)
++        t = self.get_ctypes_type(declaration.type, declaration.declarator)
+ 
+         if type(t) in (CtypesStruct, CtypesEnum):
+             self.handle_ctypes_new_type(
+@@ -183,7 +206,7 @@
+                 name, remove_function_pointer(t), filename, lineno)
+         elif isinstance(t, CtypesFunction):
+             self.handle_ctypes_function(
+-                name, t.restype, t.argtypes, t.variadic, filename, lineno)
++                name, t.restype, t.argtypes, t.errcheck, t.variadic, filename, lineno)
+         elif declaration.storage != 'static':
+             self.handle_ctypes_variable(name, t, filename, lineno)
+ 
+@@ -195,7 +218,7 @@
+     def handle_ctypes_typedef(self, name, ctype, filename, lineno):
+         pass
+ 
+-    def handle_ctypes_function(self, name, restype, argtypes, filename, lineno):
++    def handle_ctypes_function(self, name, restype, argtypes, errcheck, filename, lineno):
+         pass
+ 
+     def handle_ctypes_variable(self, name, ctype, filename, lineno):
+Index: lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(working copy)
+@@ -64,7 +64,7 @@
+ 
+     def parse(self):
+         fd, fname = mkstemp(suffix=".h")
+-        f = os.fdopen(fd, 'w+b')
++        f = os.fdopen(fd, 'w')
+         for header in self.options.other_headers:
+             print('#include <%s>' % header, file=f)
+         for header in self.headers:
+@@ -71,7 +71,7 @@
+             print('#include "%s"' % os.path.abspath(header), file=f)
+         f.flush()
+         f.close()
+-        ctypesparser.CtypesParser.parse(self, fname, None)
++        ctypesparser.CtypesParser.parse(self, fname, False)
+         os.remove(fname)
+ 
+         for name, params, expr, (filename, lineno) in self.saved_macros:
+@@ -123,8 +123,8 @@
+         else:
+             self.handle_struct(ctype, filename, lineno)
+ 
+-    def handle_ctypes_function(self, name, restype, argtypes, variadic,
+-                               filename, lineno):
++    def handle_ctypes_function(self, name, restype, argtypes, errcheck,
++                               variadic, filename, lineno):
+         # Called by CtypesParser
+         restype.visit(self)
+         for argtype in argtypes:
+@@ -133,6 +133,7 @@
+         function = FunctionDescription(name,
+                                        restype,
+                                        argtypes,
++                                       errcheck,
+                                        variadic=variadic,
+                                        src=(filename, repr(lineno)))
+ 
+@@ -169,6 +170,7 @@
+         if ctypestruct.opaque:
+             if name not in self.already_seen_opaque_structs:
+                 struct = StructDescription(ctypestruct.tag,
++                                           ctypestruct.packed,
+                                            ctypestruct.variety,
+                                            None,  # No members
+                                            True,  # Opaque
+@@ -198,6 +200,7 @@
+ 
+             else:
+                 struct = StructDescription(ctypestruct.tag,
++                                           ctypestruct.packed,
+                                            ctypestruct.variety,
+                                            ctypestruct.members,
+                                            False,  # Not opaque
+@@ -223,7 +226,7 @@
+         if ctypeenum.opaque:
+             if tag not in self.already_seen_opaque_enums:
+                 enum = EnumDescription(ctypeenum.tag,
+-                                       ctypeenum.enumerators,
++                                       None,
+                                        ctypeenum,
+                                        src=(filename, str(lineno)))
+                 enum.opaque = True
+@@ -240,12 +243,13 @@
+                 enum.opaque = False
+                 enum.ctype = ctypeenum
+                 enum.src = ctypeenum.src
++                enum.members = ctypeenum.enumerators
+ 
+                 del self.already_seen_opaque_enums[tag]
+ 
+             else:
+                 enum = EnumDescription(ctypeenum.tag,
+-                                       None,
++                                       ctypeenum.enumerators,
+                                        src=(filename, str(lineno)),
+                                        ctype=ctypeenum)
+                 enum.opaque = False
+Index: lib/python/ctypes/ctypesgencore/parser/lex.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/lex.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/lex.py	(working copy)
+@@ -43,8 +43,9 @@
+ import sys
+ import types
+ import collections
++import functools
++from grass.script.utils import decode
+ 
+-
+ if PY3:
+     _meth_func = "__func__"
+     _meth_self = "__self__"
+@@ -255,7 +256,10 @@
+     # input() - Push a new string into the lexer
+     # ------------------------------------------------------------
+     def input(self, s):
+-        if not (isinstance(s, bytes) or isinstance(s, str)):
++        s = decode(s)
++        if not (isinstance(s, bytes) or
++                isinstance(s, str) or
++                isinstance(s, unicode)):
+             raise ValueError("Expected a string")
+         self.lexdata = s
+         self.lexpos = 0
+@@ -682,7 +686,7 @@
+                     error = 1
+                     continue
+                 name, statetype = s
+-                if not isinstance(name, bytes):
++                if not isinstance(name, str):
+                     print("lex: state name %s must be a string" % repr(name))
+                     error = 1
+                     continue
+@@ -732,11 +736,21 @@
+ 
+     # Sort the functions by line number
+     for f in funcsym.values():
+-        f.sort(lambda x, y: cmp(get_func_code(x[1]).co_firstlineno, get_func_code(y[1]).co_firstlineno))
++        if os.sys.version_info.major >= 3:
++            f.sort(key=lambda x: get_func_code(x[1]).co_firstlineno)
++        else:
++            f.sort(key=lambda x, y: cmp(get_func_code(x[1]).co_firstlineno,
++                                        get_func_code(y[1]).co_firstlineno))
+ 
+     # Sort the strings by regular expression length
+     for s in strsym.values():
+-        s.sort(lambda x, y: (len(x[1]) < len(y[1])) - (len(x[1]) > len(y[1])))
++        if os.sys.version_info.major >= 3:
++            s.sort(key=functools.cmp_to_key(lambda x, y:
++                                            (len(x[1]) < len(y[1])) -
++                                            (len(x[1]) > len(y[1]))))
++        else:
++            s.sort(key=lambda x, y: (len(x[1]) < len(y[1])) -
++                                    (len(x[1]) > len(y[1])))
+ 
+     regexs = {}
+ 
+@@ -747,8 +761,8 @@
+         # Add rules defined by functions first
+         for fname, f in funcsym[state]:
+             line = get_func_code(f).co_firstlineno
+-            file = get_func_code(f).co_filename
+-            files[file] = None
++            file_ = get_func_code(f).co_filename
++            files[file_] = None
+             tokname = toknames[fname]
+ 
+             ismethod = isinstance(f, types.MethodType)
+@@ -760,17 +774,20 @@
+                 else:
+                     reqargs = 1
+                 if nargs > reqargs:
+-                    print("%s:%d: Rule '%s' has too many arguments." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' has too many arguments."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+                 if nargs < reqargs:
+-                    print("%s:%d: Rule '%s' requires an argument." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' requires an argument."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+                 if tokname == 'ignore':
+-                    print("%s:%d: Rule '%s' must be defined as a string." % (file, line, f.__name__))
++                    print("%s:%d: Rule '%s' must be defined as a string."
++                          % (file_, line, f.__name__))
+                     error = 1
+                     continue
+ 
+@@ -783,18 +800,23 @@
+                     try:
+                         c = re.compile("(?P<%s>%s)" % (f.__name__, f.__doc__), re.VERBOSE | reflags)
+                         if c.match(""):
+-                            print("%s:%d: Regular expression for rule '%s' matches empty string." % (file, line, f.__name__))
++                            print("%s:%d: Regular expression for rule '%s' "
++                                  "matches empty string."
++                                  % (file_, line, f.__name__))
+                             error = 1
+                             continue
+                     except re.error as e:
+-                        print("%s:%d: Invalid regular expression for rule '%s'. %s" % (file, line, f.__name__, e))
++                        print("%s:%d: Invalid regular expression for rule '%s'. %s"
++                              % (file_, line, f.__name__, e))
+                         if '#' in f.__doc__:
+-                            print("%s:%d. Make sure '#' in rule '%s' is escaped with '\\#'." % (file, line, f.__name__))
++                            print("%s:%d. Make sure '#' in rule '%s' is escaped with '\\#'."
++                                  % (file_, line, f.__name__))
+                         error = 1
+                         continue
+ 
+                     if debug:
+-                        print("lex: Adding rule %s -> '%s' (state '%s')" % (f.__name__, f.__doc__, state))
++                        print("lex: Adding rule %s -> '%s' (state '%s')"
++                              % (f.__name__, f.__doc__, state))
+ 
+                 # Okay. The regular expression seemed okay.  Let's append it to the master regular
+                 # expression we're building
+@@ -801,7 +823,8 @@
+ 
+                 regex_list.append("(?P<%s>%s)" % (f.__name__, f.__doc__))
+             else:
+-                print("%s:%d: No regular expression defined for rule '%s'" % (file, line, f.__name__))
++                print("%s:%d: No regular expression defined for rule '%s'"
++                      % (file_, line, f.__name__))
+ 
+         # Now add all of the simple rules
+         for name, r in strsym[state]:
+Index: lib/python/ctypes/ctypesgencore/parser/lextab.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/lextab.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/lextab.py	(working copy)
+@@ -1,8 +1,8 @@
+ # lextab.py. This file automatically created by PLY (version 2.2). Don't edit!
+-_lextokens    = {'RIGHT_OP': None, 'RIGHT_ASSIGN': None, 'DEC_OP': None, 'PP_MACRO_PARAM': None, 'DIV_ASSIGN': None, 'PP_DEFINE': None, 'PP_END_DEFINE': None, 'PP_DEFINE_MACRO_NAME': None, 'HEADER_NAME': None, 'NEWLINE': None, 'CHARACTER_CONSTANT': None, 'PP_STRINGIFY': None, 'AND_ASSIGN': None, 'PTR_OP': None, 'ELLIPSIS': None, 'IDENTIFIER': None, 'ADD_ASSIGN': None, 'PERIOD': None, 'AND_OP': None, 'OTHER': None, 'LPAREN': None, 'LEFT_OP': None, 'LE_OP': None, 'OR_OP': None, 'SUB_ASSIGN': None, 'MOD_ASSIGN': None, 'STRING_LITERAL': None, 'PP_IDENTIFIER_PASTE': None, 'PP_NUMBER': None, 'PP_DEFINE_NAME': None, 'XOR_ASSIGN': None, 'OR_ASSIGN': None, 'GE_OP': None, 'MUL_ASSIGN': None, 'LEFT_ASSIGN': None, 'INC_OP': None, 'NE_OP': None, 'EQ_OP': None}
++_lextokens    = {'HEADER_NAME': None, 'IDENTIFIER': None, 'PP_NUMBER': None, 'CHARACTER_CONSTANT': None, 'STRING_LITERAL': None, 'OTHER': None, 'PTR_OP': None, 'INC_OP': None, 'DEC_OP': None, 'LEFT_OP': None, 'RIGHT_OP': None, 'LE_OP': None, 'GE_OP': None, 'EQ_OP': None, 'NE_OP': None, 'AND_OP': None, 'OR_OP': None, 'MUL_ASSIGN': None, 'DIV_ASSIGN': None, 'MOD_ASSIGN': None, 'ADD_ASSIGN': None, 'SUB_ASSIGN': None, 'LEFT_ASSIGN': None, 'RIGHT_ASSIGN': None, 'AND_ASSIGN': None, 'XOR_ASSIGN': None, 'OR_ASSIGN': None, 'PERIOD': None, 'ELLIPSIS': None, 'LPAREN': None, 'NEWLINE': None, 'PP_DEFINE': None, 'PP_DEFINE_NAME': None, 'PP_DEFINE_MACRO_NAME': None, 'PP_MACRO_PARAM': None, 'PP_STRINGIFY': None, 'PP_IDENTIFIER_PASTE': None, 'PP_END_DEFINE': None}
+ _lexreflags   = 0
+ _lexliterals  = ''
+ _lexstateinfo = {'INITIAL': 'inclusive', 'DEFINE': 'exclusive'}
+-_lexstatere   = {'INITIAL': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\|\\||\\+\\+|>>=|\\|=|\\^=|<<=|\\*=|\\+=|>=|>>|%=|:>|%>|!=|\\*|\\.|==|\\^|--|-=|->|\\||<<|<=|<:|<%|\\)|\\+|\\?|&=|&&|\\[|/=|&|,|:|<|>|~|!|%|-|/|;|=|]|{|}))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_INITIAL_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_INITIAL_identifier', 'INITIAL_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_INITIAL_newline>\\n)|(?P<t_INITIAL_pp_define>\\#define)', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_INITIAL_newline', 'INITIAL_newline'), ('t_INITIAL_pp_define', 'INITIAL_pp_define')])], 'DEFINE': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\|\\||\\+\\+|>>=|\\|=|\\^=|<<=|\\*=|\\+=|>=|>>|%=|:>|%>|!=|\\*|\\.|==|\\^|--|-=|->|\\||<<|<=|<:|<%|\\)|\\+|\\?|&=|&&|\\[|/=|&|,|:|<|>|~|!|%|-|/|;|=|]|{|}))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_DEFINE_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_DEFINE_identifier', 'DEFINE_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_DEFINE_newline>\\n)|(?P<t_DEFINE_pp_param_op>(\\#\\#)|(\\#))', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_DEFINE_newline', 'DEFINE_newline'), ('t_DEFINE_pp_param_op', 'DEFINE_pp_param_op')])]}
++_lexstatere   = {'INITIAL': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\+\\+|\\|\\||>>=|<<=|\\+=|\\*=|\\^=|\\|=|-=|/=|%=|&=|>>|<<|--|->|&&|<=|>=|==|!=|<:|:>|<%|%>|\\)|\\[|\\.|\\+|\\*|\\^|\\||\\?|;|{|}|,|:|=|]|&|!|~|-|/|%|<|>))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_INITIAL_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_INITIAL_identifier', 'INITIAL_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_INITIAL_newline>\\n)|(?P<t_INITIAL_pp_define>\\#define)', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_INITIAL_newline', 'INITIAL_newline'), ('t_INITIAL_pp_define', 'INITIAL_pp_define')])], 'DEFINE': [('(?P<t_ANY_directive>\\#\\s+(\\d+)\\s+"([^"]+)"[ \\d]*\\n)|(?P<t_ANY_punctuator>(\\.\\.\\.|\\+\\+|\\|\\||>>=|<<=|\\+=|\\*=|\\^=|\\|=|-=|/=|%=|&=|>>|<<|--|->|&&|<=|>=|==|!=|<:|:>|<%|%>|\\)|\\[|\\.|\\+|\\*|\\^|\\||\\?|;|{|}|,|:|=|]|&|!|~|-|/|%|<|>))', [None, ('t_ANY_directive', 'ANY_directive'), None, None, ('t_ANY_punctuator', 'ANY_punctuator')]), ('(?P<t_DEFINE_identifier>[a-zA-Z_]([a-zA-Z_]|[0-9])*)', [None, ('t_DEFINE_identifier', 'DEFINE_identifier')]), ('(?P<t_ANY_float>(?P<p1>[0-9]+)?(?P<dp>[.]?)(?P<p2>(?(p1)[0-9]*|[0-9]+))(?P<exp>(?:[Ee][+-]?[0-9]+)?)(?P<suf>([FfLl]|d[dfl]|D[DFL]|[fFdD][0-9]+x?)?)(?!\\w))', [None, ('t_ANY_float', 'ANY_float'), None, None, None, None, None]), ('(?P<t_ANY_int>(?P<p1>(?:0x[a-fA-F0-9]+)|(?:[0-9]+))(?P<suf>[uUlL]*))', [None, ('t_ANY_int', 'ANY_int'), None, None]), ('(?P<t_ANY_character_constant>L?\'(\\\\.|[^\\\\\'])+\')|(?P<t_ANY_string_literal>L?"(\\\\.|[^\\\\"])*")|(?P<t_ANY_lparen>\\()|(?P<t_DEFINE_newline>\\n)|(?P<t_DEFINE_pp_param_op>(\\#\\#)|(\\#))', [None, ('t_ANY_character_constant', 'ANY_character_constant'), None, ('t_ANY_string_literal', 'ANY_string_literal'), None, ('t_ANY_lparen', 'ANY_lparen'), ('t_DEFINE_newline', 'DEFINE_newline'), ('t_DEFINE_pp_param_op', 'DEFINE_pp_param_op')])]}
+ _lexstateignore = {'INITIAL': ' \t\x0b\x0c\r', 'DEFINE': ' \t\x0b\x0c\r'}
+ _lexstateerrorf = {'INITIAL': 't_INITIAL_error', 'DEFINE': 't_DEFINE_error'}
+Index: lib/python/ctypes/ctypesgencore/parser/pplexer.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/pplexer.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/pplexer.py	(working copy)
+@@ -21,6 +21,7 @@
+ from . import lex
+ from . import yacc
+ from .lex import TOKEN
++from grass.script.utils import encode, decode
+ 
+ 
+ PY2 = True
+@@ -76,17 +77,14 @@
+ class StringLiteral(str):
+ 
+     def __new__(cls, value):
+-        assert value[0] == '"' and value[-1] == '"'
++        value = decode(value)
+         # Unescaping probably not perfect but close enough.
+         try:
+-            value = value[1:-1].decode('string_escape')
++            value = re.sub(r'\\x([0-9a-fA-F])(?![0-9a-fA-F])',
++                           r'\x0\1', value[1:-1])
+         except ValueError as e:
+-            try:
+-                value = re.sub(r'\\x([0-9a-fA-F])(?![0-9a-fA-F])',
+-                               r'\x0\1',
+-                               value[1:-1]).decode('string_escape')
+-            except ValueError as e:
+-                raise ValueError("invalid \\x escape in %s" % value)
++            raise ValueError("invalid \\x escape in %s" % value)
++
+         return str.__new__(cls, value)
+ 
+ # --------------------------------------------------------------------------
+@@ -93,6 +91,7 @@
+ # Token declarations
+ # --------------------------------------------------------------------------
+ 
++
+ punctuators = {
+     # value: (regex, type)
+     r'...': (r'\.\.\.', 'ELLIPSIS'),
+@@ -155,6 +154,7 @@
+         punctuator_regexes.sort(key=lambda a: -len(a))
+     return '(%s)' % '|'.join(punctuator_regexes)
+ 
++
+ # Process line-number directives from the preprocessor
+ # See http://docs.freebsd.org/info/cpp/cpp.info.Output.html
+ DIRECTIVE = r'\#\s+(\d+)\s+"([^"]+)"[ \d]*\n'
+@@ -172,6 +172,7 @@
+     t.type = punctuators[t.value][1]
+     return t
+ 
++
+ IDENTIFIER = sub('{L}({L}|{D})*')
+ 
+ 
+@@ -210,6 +211,7 @@
+         t.type = 'IDENTIFIER'
+     return t
+ 
++
+ FLOAT_LITERAL = sub(r"(?P<p1>{D}+)?(?P<dp>[.]?)(?P<p2>(?(p1){D}*|{D}+))"
+                     r"(?P<exp>(?:[Ee][+-]?{D}+)?)(?P<suf>{FS}?)(?!\w)")
+ 
+@@ -239,6 +241,7 @@
+ 
+     return t
+ 
++
+ INT_LITERAL = sub(r"(?P<p1>(?:0x{H}+)|(?:{D}+))(?P<suf>{IS})")
+ 
+ 
+@@ -264,6 +267,7 @@
+ 
+     return t
+ 
++
+ CHARACTER_CONSTANT = sub(r"L?'(\\.|[^\\'])+'")
+ 
+ 
+@@ -272,6 +276,7 @@
+     t.type = 'CHARACTER_CONSTANT'
+     return t
+ 
++
+ STRING_LITERAL = sub(r'L?"(\\.|[^\\"])*"')
+ 
+ 
+@@ -278,7 +283,7 @@
+ @TOKEN(STRING_LITERAL)
+ def t_ANY_string_literal(t):
+     t.type = 'STRING_LITERAL'
+-    t.value = StringLiteral(t.value)
++    t.value = StringLiteral(encode(t.value))
+     return t
+ 
+ 
+@@ -310,6 +315,7 @@
+ def t_DEFINE_newline(t):
+     t.type = 'PP_END_DEFINE'
+     t.lexer.begin("INITIAL")
++    t.lexer.lineno += 1
+     del t.lexer.macro_params
+ 
+     # Damage control in case the token immediately after the #define failed
+@@ -338,4 +344,5 @@
+     t.lexer.lexpos += 1  # Skip it if it's an error in a #define
+     return t
+ 
++
+ t_ANY_ignore = ' \t\v\f\r'
+Index: lib/python/ctypes/ctypesgencore/parser/preprocessor.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(working copy)
+@@ -24,7 +24,9 @@
+ from . import yacc
+ from .lex import TOKEN
+ 
++from grass.script.utils import decode
+ 
++
+ # --------------------------------------------------------------------------
+ # Lexers
+ # --------------------------------------------------------------------------
+@@ -147,17 +149,18 @@
+         """Parse a file and save its output"""
+ 
+         cmd = self.options.cpp
++        cmd += " -U __GNUC__ -dD"
++
++        # This fixes Issue #6 where OS X 10.6+ adds a C extension that breaks
++        # the parser.  Blocks shouldn't be needed for ctypesgen support anyway.
+         if sys.platform == 'darwin':
+             cmd += " -U __BLOCKS__"
+-        cmd += " -U __GNUC__"
+-        if sys.platform.startswith('freebsd'):
+-            cmd += " -D __GNUCLIKE_BUILTIN_STDARG"
+-        cmd += " -dD"
++
+         for path in self.options.include_search_paths:
+             cmd += " -I%s" % path
+         for define in self.defines:
+             cmd += ' "-D%s"' % define
+-        cmd += " " + filename.replace('\\', '/')
++        cmd += ' "' + filename + '"'
+ 
+         self.cparser.handle_status(cmd)
+ 
+@@ -166,9 +169,12 @@
+ 
+         pp = subprocess.Popen(cmd,
+                               shell=True,
++                              universal_newlines=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+         ppout, pperr = pp.communicate()
++        ppout = decode(ppout)
++        pperr = decode(pperr)
+ 
+         for line in pperr.split("\n"):
+             if line:
+@@ -207,7 +213,7 @@
+             self.cparser.handle_status("Saving preprocessed headers to %s." %
+                                        self.options.save_preprocessed_headers)
+             try:
+-                f = file(self.options.save_preprocessed_headers, "w")
++                f = open(self.options.save_preprocessed_headers, "w")
+                 f.write(text)
+                 f.close()
+             except IOError:
+Index: lib/python/ctypes/ctypesgencore/parser/yacc.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/parser/yacc.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/parser/yacc.py	(working copy)
+@@ -2135,7 +2135,7 @@
+     error = 0
+ 
+     # Add parsing method to signature
+-    Signature.update(method)
++    Signature.update(method.encode())
+ 
+     # If a "module" parameter was supplied, extract its dictionary.
+     # Note: a module may in fact be an instance as well.
+Index: lib/python/ctypes/ctypesgencore/printer/printer.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/printer/printer.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/printer/printer.py	(working copy)
+@@ -23,7 +23,7 @@
+     def __init__(self, outpath, options, data):
+         status_message("Writing to %s." % outpath)
+ 
+-        self.file = file(outpath, "w")
++        self.file = open(outpath, "w")
+         self.options = options
+ 
+         if self.options.strip_build_path and \
+@@ -39,7 +39,8 @@
+         self.print_loader()
+         print(file=self.file)
+ 
+-        self.print_group(self.options.libraries, "libraries", self.print_library)
++        self.print_group(self.options.libraries,
++                         "libraries", self.print_library)
+         self.print_group(self.options.modules, "modules", self.print_module)
+ 
+         method_table = {
+@@ -110,7 +111,7 @@
+         if self.options.header_template:
+             path = self.options.header_template
+             try:
+-                template_file = file(path, "r")
++                template_file = open(path, "r")
+             except IOError:
+                 error_message("Cannot load header template from file \"%s\" "
+                               " - using default template." % path, cls='missing-file')
+@@ -117,7 +118,7 @@
+ 
+         if not template_file:
+             path = path_to_local_file("defaultheader.py")
+-            template_file = file(path, "r")
++            template_file = open(path, "r")
+ 
+         template_subs = self.template_subs()
+         self.file.write(template_file.read() % template_subs)
+@@ -129,7 +130,7 @@
+ 
+         print("# Begin preamble", file=self.file)
+         print(file=self.file)
+-        preamble_file = file(path, "r")
++        preamble_file = open(path, "r")
+         self.file.write(preamble_file.read())
+         preamble_file.close()
+         print(file=self.file)
+@@ -143,14 +144,14 @@
+         print(file=self.file)
+         path = path_to_local_file("libraryloader.py",
+                                   ctypesgencore.libraryloader)
+-        loader_file = file(path, "r")
++        loader_file = open(path, "r")
+         self.file.write(loader_file.read())
+         loader_file.close()
+         print(file=self.file)
+         print("# End loader", file=self.file)
+         print(file=self.file)
+-        print("add_library_search_dirs([%s])" % \
+-            ", ".join([repr(d) for d in self.options.runtime_libdirs]), file=self.file)
++        print("add_library_search_dirs([%s])" %
++              ", ".join([repr(d) for d in self.options.runtime_libdirs]), file=self.file)
+ 
+     def print_library(self, library):
+         print('_libs["%s"] = load_library("%s")' % (library, library), file=self.file)
+@@ -159,34 +160,67 @@
+         print('from %s import *' % name, file=self.file)
+ 
+     def print_constant(self, constant):
+-        print('%s = %s' % \
+-            (constant.name, constant.value.py_string(False)), end=' ', file=self.file)
++        print('%s = %s' %
++              (constant.name, constant.value.py_string(False)), end=' ', file=self.file)
+         self.srcinfo(constant.src)
+ 
+     def print_typedef(self, typedef):
+-        print('%s = %s' % \
+-            (typedef.name, typedef.ctype.py_string()), end=' ', file=self.file)
++        print('%s = %s' %
++              (typedef.name, typedef.ctype.py_string()), end=' ', file=self.file)
+         self.srcinfo(typedef.src)
+ 
+     def print_struct(self, struct):
+         self.srcinfo(struct.src)
+         base = {'union': 'Union', 'struct': 'Structure'}[struct.variety]
+-        print('class %s_%s(%s):' % \
+-            (struct.variety, struct.tag, base), file=self.file)
++        print('class %s_%s(%s):' %
++              (struct.variety, struct.tag, base), file=self.file)
+         print('    pass', file=self.file)
+ 
+     def print_struct_members(self, struct):
+         if struct.opaque:
+             return
++
++        # is this supposed to be packed?
++        if struct.packed:
++            print('{}_{}._pack_ = 1'.format(struct.variety, struct.tag),
++                  file=self.file)
++
++        # handle unnamed fields.
++        unnamed_fields = []
++        names = set([x[0] for x in struct.members])
++        anon_prefix = "unnamed_"
++        n = 1
++        for mi in range(len(struct.members)):
++            mem = list(struct.members[mi])
++            if mem[0] is None:
++                while True:
++                    name = "%s%i" % (anon_prefix, n)
++                    n += 1
++                    if name not in names:
++                        break
++                mem[0] = name
++                names.add(name)
++                if type(mem[1]) is CtypesStruct:
++                    unnamed_fields.append(name)
++                struct.members[mi] = mem
++
+         print('%s_%s.__slots__ = [' % (struct.variety, struct.tag), file=self.file)
+         for name, ctype in struct.members:
+             print("    '%s'," % name, file=self.file)
+         print(']', file=self.file)
++
++        if len(unnamed_fields) > 0:
++            print ('%s_%s._anonymous_ = [' % (struct.variety,
++                                              struct.tag), file=self.file)
++            for name in unnamed_fields:
++                print ("    '%s'," % name, file=self.file)
++            print (']', file=self.file)
++
+         print('%s_%s._fields_ = [' % (struct.variety, struct.tag), file=self.file)
+         for name, ctype in struct.members:
+             if isinstance(ctype, CtypesBitfield):
+-                print("    ('%s', %s, %s)," % \
+-                    (name, ctype.py_string(), ctype.bitfield.py_string(False)), file=self.file)
++                print("    ('%s', %s, %s)," %
++                      (name, ctype.py_string(), ctype.bitfield.py_string(False)), file=self.file)
+             else:
+                 print("    ('%s', %s)," % (name, ctype.py_string()), file=self.file)
+         print(']', file=self.file)
+@@ -204,67 +238,86 @@
+ 
+     def print_fixed_function(self, function):
+         self.srcinfo(function.src)
++
++        # If we know what library the function lives in, look there.
++        # Otherwise, check all the libraries.
+         if function.source_library:
+-            print("if hasattr(_libs[%r], %r):" % \
+-                (function.source_library, function.c_name()), file=self.file)
+-            print("    %s = _libs[%r].%s" % \
+-                (function.py_name(), function.source_library, function.c_name()), file=self.file)
+-            print("    %s.restype = %s" % \
+-                (function.py_name(), function.restype.py_string()), file=self.file)
+-            print("    %s.argtypes = [%s]" % (
+-                function.py_name(),
+-                ', '.join([a.py_string() for a in function.argtypes])), file=self.file)
++            print("if hasattr(_libs[%r], %r):" %
++                  (function.source_library, function.c_name()), file=self.file)
++            print("    %s = _libs[%r].%s" %
++                  (function.py_name(), function.source_library, function.c_name()), file=self.file)
+         else:
+-            print("for _lib in _libs.values():", file=self.file)
+-            print("    if hasattr(_lib, %r):" % function.c_name(), file=self.file)
+-            print("        %s = _lib.%s" % (function.py_name(), function.c_name()), file=self.file)
+-            print("        %s.restype = %s" % (
+-                function.py_name(), function.restype.py_string()), file=self.file)
+-            print("        %s.argtypes = [%s]" % (
+-                function.py_name(), ', '.join([a.py_string() for a in function.argtypes])), file=self.file)
+-            print("        break", file=self.file)
++            print("for _lib in six.itervalues(_libs):", file=self.file)
++            print("    if not hasattr(_lib, %r):" % function.c_name(), file=self.file)
++            print("        continue", file=self.file)
++            print("    %s = _lib.%s" %
++                  (function.py_name(), function.c_name()), file=self.file)
+ 
++        # Argument types
++        print("    %s.argtypes = [%s]" % (function.py_name(),
++                                          ', '.join([a.py_string() for a in function.argtypes])), file=self.file)
++
++        # Return value
++        if function.restype.py_string() == "String":
++            print("    if sizeof(c_int) == sizeof(c_void_p):", file=self.file)
++            print("        %s.restype = ReturnString" %
++                  (function.py_name()), file=self.file)
++            print("    else:", file=self.file)
++            print("        %s.restype = %s" %
++                  (function.py_name(), function.restype.py_string()), file=self.file)
++            print("        %s.errcheck = ReturnString" %
++                  (function.py_name()), file=self.file)
++        else:
++            print("    %s.restype = %s" %
++                  (function.py_name(), function.restype.py_string()), file=self.file)
++            if function.errcheck:
++                print ("    %s.errcheck = %s" %
++                       (function.py_name(), function.errcheck.py_string()), file=self.file)
++
++        if not function.source_library:
++            print("    break", file=self.file)
++
+     def print_variadic_function(self, function):
+         self.srcinfo(function.src)
+         if function.source_library:
+-            print("if hasattr(_libs[%r], %r):" % \
+-                (function.source_library, function.c_name()), file=self.file)
+-            print("    _func = _libs[%r].%s" % \
+-                (function.source_library, function.c_name()), file=self.file)
++            print("if hasattr(_libs[%r], %r):" %
++                  (function.source_library, function.c_name()), file=self.file)
++            print("    _func = _libs[%r].%s" %
++                  (function.source_library, function.c_name()), file=self.file)
+             print("    _restype = %s" % function.restype.py_string(), file=self.file)
+-            print("    _argtypes = [%s]" % \
+-                ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
+-            print("    %s = _variadic_function(_func,_restype,_argtypes)" % \
+-                function.py_name(), file=self.file)
++            print("    _argtypes = [%s]" %
++                  ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
++            print("    %s = _variadic_function(_func,_restype,_argtypes)" %
++                  function.py_name(), file=self.file)
+         else:
+             print("for _lib in _libs.values():", file=self.file)
+             print("    if hasattr(_lib, %r):" % function.c_name(), file=self.file)
+-            print("        _func = _lib.%s" % \
+-                (function.c_name()), file=self.file)
++            print("        _func = _lib.%s" %
++                  (function.c_name()), file=self.file)
+             print("        _restype = %s" % function.restype.py_string(), file=self.file)
+-            print("        _argtypes = [%s]" % \
+-                ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
+-            print("        %s = _variadic_function(_func,_restype,_argtypes)" % \
+-                function.py_name(), file=self.file)
++            print("        _argtypes = [%s]" %
++                  ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
++            print("        %s = _variadic_function(_func,_restype,_argtypes)" %
++                  function.py_name(), file=self.file)
+ 
+     def print_variable(self, variable):
+         self.srcinfo(variable.src)
+         if variable.source_library:
+             print('try:', file=self.file)
+-            print('    %s = (%s).in_dll(_libs[%r], %r)' % \
+-                (variable.py_name(),
+-                 variable.ctype.py_string(),
+-                 variable.source_library,
+-                 variable.c_name()), file=self.file)
++            print('    %s = (%s).in_dll(_libs[%r], %r)' %
++                  (variable.py_name(),
++                   variable.ctype.py_string(),
++                   variable.source_library,
++                   variable.c_name()), file=self.file)
+             print('except:', file=self.file)
+             print('    pass', file=self.file)
+         else:
+             print("for _lib in _libs.values():", file=self.file)
+             print('    try:', file=self.file)
+-            print('        %s = (%s).in_dll(_lib, %r)' % \
+-                (variable.py_name(),
+-                 variable.ctype.py_string(),
+-                 variable.c_name()), file=self.file)
++            print('        %s = (%s).in_dll(_lib, %r)' %
++                  (variable.py_name(),
++                   variable.ctype.py_string(),
++                   variable.c_name()), file=self.file)
+             print("        break", file=self.file)
+             print('    except:', file=self.file)
+             print('        pass', file=self.file)
+@@ -287,13 +340,13 @@
+ 
+     def print_func_macro(self, macro):
+         self.srcinfo(macro.src)
+-        print("def %s(%s):" % \
+-            (macro.name, ", ".join(macro.params)), file=self.file)
++        print("def %s(%s):" %
++              (macro.name, ", ".join(macro.params)), file=self.file)
+         print("    return %s" % macro.expr.py_string(True), file=self.file)
+ 
+     def insert_file(self, filename):
+         try:
+-            inserted_file = file(filename, "r")
++            inserted_file = open(filename, "r")
+         except IOError:
+             error_message("Cannot open file \"%s\". Skipped it." % filename,
+                           cls='missing-file')
+Index: lib/python/ctypes/ctypesgencore/printer_json/__init__.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/printer_json/__init__.py	(nonexistent)
++++ lib/python/ctypes/ctypesgencore/printer_json/__init__.py	(working copy)
+@@ -0,0 +1,10 @@
++#!/usr/bin/env python
++
++"""
++This module is the backend to ctypesgen; it contains classes to
++produce the final .py output files.
++"""
++
++from printer import WrapperPrinter
++
++__all__ = ["WrapperPrinter"]
+Index: lib/python/ctypes/ctypesgencore/printer_json/printer.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/printer_json/printer.py	(nonexistent)
++++ lib/python/ctypes/ctypesgencore/printer_json/printer.py	(working copy)
+@@ -0,0 +1,160 @@
++#!/usr/bin/env python
++
++import os
++import sys
++import time
++import json
++from ctypesgencore.descriptions import *
++from ctypesgencore.ctypedescs import *
++from ctypesgencore.messages import *
++
++import ctypesgencore.libraryloader  # So we can get the path to it
++# So we can find the path to local files in the printer package
++from . import test
++
++
++def path_to_local_file(name, known_local_module=test):
++    basedir = os.path.dirname(known_local_module.__file__)
++    return os.path.join(basedir, name)
++
++# From http://stackoverflow.com/q/1036409
++
++
++def todict(obj, classkey="Klass"):
++    if isinstance(obj, dict):
++        for k in obj.keys():
++            obj[k] = todict(obj[k], classkey)
++        return obj
++    elif hasattr(obj, "__iter__"):
++        return [todict(v, classkey) for v in obj]
++    elif hasattr(obj, "__dict__"):
++        data = dict([(key, todict(value, classkey))
++                     for key, value in obj.__dict__.iteritems()
++                     if not callable(value) and not key.startswith('_')])
++        if classkey is not None and hasattr(obj, "__class__"):
++            data[classkey] = obj.__class__.__name__
++        return data
++    else:
++        return obj
++
++
++class WrapperPrinter:
++
++    def __init__(self, outpath, options, data):
++        status_message("Writing to %s." % (outpath or "stdout"))
++
++        self.file = outpath and open(outpath, "w") or sys.stdout
++        self.options = options
++
++        if self.options.strip_build_path and \
++                self.options.strip_build_path[-1] != os.path.sep:
++            self.options.strip_build_path += os.path.sep
++
++        self.print_group(self.options.libraries,
++                         "libraries", self.print_library)
++
++        method_table = {
++            'function': self.print_function,
++            'macro': self.print_macro,
++            'struct': self.print_struct,
++            'struct-body': self.print_struct_members,
++            'typedef': self.print_typedef,
++            'variable': self.print_variable,
++            'enum': self.print_enum,
++            'constant': self.print_constant
++        }
++
++        res = []
++        for kind, desc in data.output_order:
++            if desc.included:
++                item = method_table[kind](desc)
++                if item:
++                    res.append(item)
++        print(json.dumps(res, sort_keys=True, indent=4), file=self.file)
++
++    def print_group(self, list, name, function):
++        if list:
++            return [function(obj) for obj in list]
++
++    def print_library(self, library):
++        return {'load_library': library}
++
++    def print_constant(self, constant):
++        return {'type': 'constant',
++                'name': constant.name,
++                'value': constant.value.py_string(False)
++                }
++
++    def print_typedef(self, typedef):
++        return {'type': 'typedef',
++                'name': typedef.name,
++                'ctype': todict(typedef.ctype)
++                }
++
++    def print_struct(self, struct):
++        res = {'type': struct.variety,
++               'name': struct.tag
++               }
++        if not struct.opaque:
++            res['fields'] = []
++            for name, ctype in struct.members:
++                field = {'name': name,
++                         'ctype': todict(ctype)
++                         }
++                if isinstance(ctype, CtypesBitfield):
++                    field['bitfield'] = ctype.bitfield.py_string(False)
++                res['fields'].append(field)
++        return res
++
++    def print_struct_members(self, struct):
++        pass
++
++    def print_enum(self, enum):
++        res = {'type': 'enum',
++               'name': enum.tag
++               }
++
++        if not enum.opaque:
++            res['fields'] = []
++            for name, ctype in enum.members:
++                field = {'name': name,
++                         'ctype': todict(ctype)
++                         }
++                res['fields'].append(field)
++        return res
++
++    def print_function(self, function):
++        res = {'type': 'function',
++               'name': function.c_name(),
++               'variadic': function.variadic,
++               'args': todict(function.argtypes),
++               'return': todict(function.restype)
++               }
++        if function.source_library:
++            res['source'] = function.source_library
++        return res
++
++    def print_variable(self, variable):
++        res = {'type': 'variable',
++               'ctype': todict(variable.ctype),
++               'name': variable.c_name()
++               }
++        if variable.source_library:
++            res['source'] = variable.source_library
++        return res
++
++    def print_macro(self, macro):
++        if macro.params:
++            return {'type': 'macro_function',
++                    'name': macro.name,
++                    'args': macro.params,
++                    'body': macro.expr.py_string(True)
++                    }
++        else:
++            # The macro translator makes heroic efforts
++            # but it occasionally fails.
++            # Beware the contents of the value!
++            return {'type': 'macro',
++                    'name': macro.name,
++                    'value': macro.expr.py_string(True)
++                    }
+Index: lib/python/ctypes/ctypesgencore/printer_json/test.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/printer_json/test.py	(nonexistent)
++++ lib/python/ctypes/ctypesgencore/printer_json/test.py	(working copy)
+@@ -0,0 +1,6 @@
++"""
++ctypesgencore.printer.printer imports this module so that it can find the path
++to defaulttemplate.py and defaultloader.py.
++"""
++
++pass
+Index: lib/python/ctypes/ctypesgencore/processor/pipeline.py
+===================================================================
+--- lib/python/ctypes/ctypesgencore/processor/pipeline.py	(revision 72833)
++++ lib/python/ctypes/ctypesgencore/processor/pipeline.py	(working copy)
+@@ -54,7 +54,9 @@
+     filter_by_regexes_exclude(data, options)
+     filter_by_regexes_include(data, options)
+     remove_macros(data, options)
+-    fix_conflicting_names(data, options)
++    if options.output_language == "python":
++        # this function is python specific
++        fix_conflicting_names(data, options)
+     find_source_libraries(data, options)
+ 
+     calculate_final_inclusion(data, options)
+Index: lib/python/ctypes/preamble.py
+===================================================================
+--- lib/python/ctypes/preamble.py	(revision 72833)
++++ lib/python/ctypes/preamble.py	(working copy)
+@@ -1,9 +1,12 @@
++import ctypes
+ import os
+ import sys
+-
+-import ctypes
++import six
+ from ctypes import *
+ 
++if sys.version_info.major >= 3:
++    long = int
++
+ _int_types = (c_int16, c_int32)
+ if hasattr(ctypes, 'c_int64'):
+     # Some builds of ctypes apparently do not have c_int64
+@@ -17,31 +20,328 @@
+ del _int_types
+ 
+ 
+-class c_void(Structure):
+-    # c_void_p is a buggy return type, converting to int, so
+-    # POINTER(None) == c_void_p is actually written as
+-    # POINTER(c_void), so it can be treated as a real pointer.
+-    _fields_ = [('dummy', c_int)]
++class UserString:
++    def __init__(self, seq):
++        if isinstance(seq, basestring):
++            self.data = seq
++        elif isinstance(seq, UserString):
++            self.data = seq.data[:]
++        else:
++            self.data = str(seq)
+ 
++    def __str__(self):
++        return str(self.data)
+ 
+-def POINTER(obj):
+-    p = ctypes.POINTER(obj)
++    def __repr__(self):
++        return repr(self.data)
+ 
+-    # Convert None to a real NULL pointer to work around bugs
+-    # in how ctypes handles None on 64-bit platforms
+-    if not isinstance(p.from_param, classmethod):
+-        def from_param(cls, x):
+-            if x is None:
+-                return cls()
++    def __int__(self):
++        return int(self.data)
++
++    def __long__(self):
++        return long(self.data)
++
++    def __float__(self):
++        return float(self.data)
++
++    def __complex__(self):
++        return complex(self.data)
++
++    def __hash__(self):
++        return hash(self.data)
++
++    def __cmp__(self, string):
++        if isinstance(string, UserString):
++            return cmp(self.data, string.data)
++        else:
++            return cmp(self.data, string)
++
++    def __contains__(self, char):
++        return char in self.data
++
++    def __len__(self):
++        return len(self.data)
++
++    def __getitem__(self, index):
++        return self.__class__(self.data[index])
++
++    def __getslice__(self, start, end):
++        start = max(start, 0)
++        end = max(end, 0)
++        return self.__class__(self.data[start:end])
++
++    def __add__(self, other):
++        if isinstance(other, UserString):
++            return self.__class__(self.data + other.data)
++        elif isinstance(other, basestring):
++            return self.__class__(self.data + other)
++        else:
++            return self.__class__(self.data + str(other))
++
++    def __radd__(self, other):
++        if isinstance(other, basestring):
++            return self.__class__(other + self.data)
++        else:
++            return self.__class__(str(other) + self.data)
++
++    def __mul__(self, n):
++        return self.__class__(self.data * n)
++    __rmul__ = __mul__
++
++    def __mod__(self, args):
++        return self.__class__(self.data % args)
++
++    # the following methods are defined in alphabetical order:
++    def capitalize(self):
++        return self.__class__(self.data.capitalize())
++
++    def center(self, width, *args):
++        return self.__class__(self.data.center(width, *args))
++
++    def count(self, sub, start=0, end=sys.maxsize):
++        return self.data.count(sub, start, end)
++
++    def decode(self, encoding=None, errors=None):  # XXX improve this?
++        if encoding:
++            if errors:
++                return self.__class__(self.data.decode(encoding, errors))
+             else:
+-                return x
+-        p.from_param = classmethod(from_param)
++                return self.__class__(self.data.decode(encoding))
++        else:
++            return self.__class__(self.data.decode())
+ 
+-    return p
++    def encode(self, encoding=None, errors=None):  # XXX improve this?
++        if encoding:
++            if errors:
++                return self.__class__(self.data.encode(encoding, errors))
++            else:
++                return self.__class__(self.data.encode(encoding))
++        else:
++            return self.__class__(self.data.encode())
+ 
+-String = c_char_p
+-ReturnString = c_char_p
++    def endswith(self, suffix, start=0, end=sys.maxsize):
++        return self.data.endswith(suffix, start, end)
+ 
++    def expandtabs(self, tabsize=8):
++        return self.__class__(self.data.expandtabs(tabsize))
++
++    def find(self, sub, start=0, end=sys.maxsize):
++        return self.data.find(sub, start, end)
++
++    def index(self, sub, start=0, end=sys.maxsize):
++        return self.data.index(sub, start, end)
++
++    def isalpha(self):
++        return self.data.isalpha()
++
++    def isalnum(self):
++        return self.data.isalnum()
++
++    def isdecimal(self):
++        return self.data.isdecimal()
++
++    def isdigit(self):
++        return self.data.isdigit()
++
++    def islower(self):
++        return self.data.islower()
++
++    def isnumeric(self):
++        return self.data.isnumeric()
++
++    def isspace(self):
++        return self.data.isspace()
++
++    def istitle(self):
++        return self.data.istitle()
++
++    def isupper(self):
++        return self.data.isupper()
++
++    def join(self, seq):
++        return self.data.join(seq)
++
++    def ljust(self, width, *args):
++        return self.__class__(self.data.ljust(width, *args))
++
++    def lower(self):
++        return self.__class__(self.data.lower())
++
++    def lstrip(self, chars=None):
++        return self.__class__(self.data.lstrip(chars))
++
++    def partition(self, sep):
++        return self.data.partition(sep)
++
++    def replace(self, old, new, maxsplit=-1):
++        return self.__class__(self.data.replace(old, new, maxsplit))
++
++    def rfind(self, sub, start=0, end=sys.maxsize):
++        return self.data.rfind(sub, start, end)
++
++    def rindex(self, sub, start=0, end=sys.maxsize):
++        return self.data.rindex(sub, start, end)
++
++    def rjust(self, width, *args):
++        return self.__class__(self.data.rjust(width, *args))
++
++    def rpartition(self, sep):
++        return self.data.rpartition(sep)
++
++    def rstrip(self, chars=None):
++        return self.__class__(self.data.rstrip(chars))
++
++    def split(self, sep=None, maxsplit=-1):
++        return self.data.split(sep, maxsplit)
++
++    def rsplit(self, sep=None, maxsplit=-1):
++        return self.data.rsplit(sep, maxsplit)
++
++    def splitlines(self, keepends=0):
++        return self.data.splitlines(keepends)
++
++    def startswith(self, prefix, start=0, end=sys.maxsize):
++        return self.data.startswith(prefix, start, end)
++
++    def strip(self, chars=None):
++        return self.__class__(self.data.strip(chars))
++
++    def swapcase(self):
++        return self.__class__(self.data.swapcase())
++
++    def title(self):
++        return self.__class__(self.data.title())
++
++    def translate(self, *args):
++        return self.__class__(self.data.translate(*args))
++
++    def upper(self):
++        return self.__class__(self.data.upper())
++
++    def zfill(self, width):
++        return self.__class__(self.data.zfill(width))
++
++
++class MutableString(UserString):
++    """mutable string objects
++
++    Python strings are immutable objects.  This has the advantage, that
++    strings may be used as dictionary keys.  If this property isn't needed
++    and you insist on changing string values in place instead, you may cheat
++    and use MutableString.
++
++    But the purpose of this class is an educational one: to prevent
++    people from inventing their own mutable string class derived
++    from UserString and than forget thereby to remove (override) the
++    __hash__ method inherited from UserString.  This would lead to
++    errors that would be very hard to track down.
++
++    A faster and better solution is to rewrite your program using lists."""
++
++    def __init__(self, string=""):
++        self.data = string
++
++    def __hash__(self):
++        raise TypeError("unhashable type (it is mutable)")
++
++    def __setitem__(self, index, sub):
++        if index < 0:
++            index += len(self.data)
++        if index < 0 or index >= len(self.data):
++            raise IndexError
++        self.data = self.data[:index] + sub + self.data[index + 1:]
++
++    def __delitem__(self, index):
++        if index < 0:
++            index += len(self.data)
++        if index < 0 or index >= len(self.data):
++            raise IndexError
++        self.data = self.data[:index] + self.data[index + 1:]
++
++    def __setslice__(self, start, end, sub):
++        start = max(start, 0)
++        end = max(end, 0)
++        if isinstance(sub, UserString):
++            self.data = self.data[:start] + sub.data + self.data[end:]
++        elif isinstance(sub, basestring):
++            self.data = self.data[:start] + sub + self.data[end:]
++        else:
++            self.data = self.data[:start] + str(sub) + self.data[end:]
++
++    def __delslice__(self, start, end):
++        start = max(start, 0)
++        end = max(end, 0)
++        self.data = self.data[:start] + self.data[end:]
++
++    def immutable(self):
++        return UserString(self.data)
++
++    def __iadd__(self, other):
++        if isinstance(other, UserString):
++            self.data += other.data
++        elif isinstance(other, basestring):
++            self.data += other
++        else:
++            self.data += str(other)
++        return self
++
++    def __imul__(self, n):
++        self.data *= n
++        return self
++
++
++class String(MutableString, Union):
++
++    _fields_ = [('raw', POINTER(c_char)),
++                ('data', c_char_p)]
++
++    def __init__(self, obj=""):
++        if isinstance(obj, (str, unicode, UserString)):
++            self.data = str(obj)
++        else:
++            self.raw = obj
++
++    def __len__(self):
++        return self.data and len(self.data) or 0
++
++    def from_param(cls, obj):
++        # Convert None or 0
++        if obj is None or obj == 0:
++            return cls(POINTER(c_char)())
++
++        # Convert from String
++        elif isinstance(obj, String):
++            return obj
++
++        # Convert from str
++        elif isinstance(obj, str):
++            return cls(obj)
++
++        # Convert from c_char_p
++        elif isinstance(obj, c_char_p):
++            return obj
++
++        # Convert from POINTER(c_char)
++        elif isinstance(obj, POINTER(c_char)):
++            return obj
++
++        # Convert from raw pointer
++        elif isinstance(obj, int):
++            return cls(cast(obj, POINTER(c_char)))
++
++        # Convert from c_char array
++        elif isinstance(obj, c_char * len(obj)):
++            return obj
++
++        # Convert from object
++        else:
++            return String.from_param(obj._as_parameter_)
++    from_param = classmethod(from_param)
++
++
++def ReturnString(obj, func=None, arguments=None):
++    return String.from_param(obj)
++
+ # As of ctypes 1.0, ctypes does not support custom error-checking
+ # functions on callbacks, nor does it support custom datatypes on
+ # callbacks, so we must ensure that all callbacks return
+@@ -64,10 +364,12 @@
+ 
+ class _variadic_function(object):
+ 
+-    def __init__(self, func, restype, argtypes):
++    def __init__(self, func, restype, argtypes, errcheck):
+         self.func = func
+         self.func.restype = restype
+         self.argtypes = argtypes
++        if errcheck:
++            self.func.errcheck = errcheck
+ 
+     def _as_parameter_(self):
+         # So we can pass this variadic function as a function pointer
