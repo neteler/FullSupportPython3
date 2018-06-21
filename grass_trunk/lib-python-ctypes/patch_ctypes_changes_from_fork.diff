@@ -1458,7 +1458,7 @@ Index: lib/python/ctypes/ctypesgencore/printer/printer.py
              else:
                  print("    ('%s', %s)," % (name, ctype.py_string()), file=self.file)
          print(']', file=self.file)
-@@ -204,67 +238,86 @@
+@@ -204,67 +238,88 @@
  
      def print_fixed_function(self, function):
          self.srcinfo(function.src)
@@ -1534,9 +1534,10 @@ Index: lib/python/ctypes/ctypesgencore/printer/printer.py
 -                ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
 -            print("    %s = _variadic_function(_func,_restype,_argtypes)" % \
 -                function.py_name(), file=self.file)
++            print("    _errcheck = %s" % function.errcheck.py_string(), file=self.file)
 +            print("    _argtypes = [%s]" %
 +                  ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
-+            print("    %s = _variadic_function(_func,_restype,_argtypes)" %
++            print("    %s = _variadic_function(_func,_restype,_argtypes,_errcheck)" %
 +                  function.py_name(), file=self.file)
          else:
              print("for _lib in _libs.values():", file=self.file)
@@ -1550,9 +1551,10 @@ Index: lib/python/ctypes/ctypesgencore/printer/printer.py
 -                ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
 -            print("        %s = _variadic_function(_func,_restype,_argtypes)" % \
 -                function.py_name(), file=self.file)
++            print("        _errcheck = %s" % function.errcheck.py_string(), file=self.file)
 +            print("        _argtypes = [%s]" %
 +                  ', '.join([a.py_string() for a in function.argtypes]), file=self.file)
-+            print("        %s = _variadic_function(_func,_restype,_argtypes)" %
++            print("        %s = _variadic_function(_func,_restype,_argtypes,_errcheck)" %
 +                  function.py_name(), file=self.file)
  
      def print_variable(self, variable):
@@ -1585,7 +1587,7 @@ Index: lib/python/ctypes/ctypesgencore/printer/printer.py
              print("        break", file=self.file)
              print('    except:', file=self.file)
              print('        pass', file=self.file)
-@@ -287,13 +340,13 @@
+@@ -287,13 +342,13 @@
  
      def print_func_macro(self, macro):
          self.srcinfo(macro.src)
