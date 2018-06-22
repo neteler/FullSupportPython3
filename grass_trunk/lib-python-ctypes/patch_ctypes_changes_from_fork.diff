@@ -1814,7 +1814,7 @@ Index: lib/python/ctypes/preamble.py
 ===================================================================
 --- lib/python/ctypes/preamble.py	(revision 72833)
 +++ lib/python/ctypes/preamble.py	(working copy)
-@@ -1,9 +1,12 @@
+@@ -1,9 +1,14 @@
 +import ctypes
  import os
  import sys
@@ -1822,14 +1822,16 @@ Index: lib/python/ctypes/preamble.py
 -import ctypes
 +import six
  from ctypes import *
++from grass.script.utils import encode
  
 +if sys.version_info.major >= 3:
 +    long = int
++    unicode = str
 +
  _int_types = (c_int16, c_int32)
  if hasattr(ctypes, 'c_int64'):
      # Some builds of ctypes apparently do not have c_int64
-@@ -17,31 +20,328 @@
+@@ -17,31 +22,328 @@
  del _int_types
  
  
@@ -2128,7 +2130,7 @@ Index: lib/python/ctypes/preamble.py
 +
 +    def __init__(self, obj=""):
 +        if isinstance(obj, (str, unicode, UserString)):
-+            self.data = str(obj)
++            self.data = encode(str(obj))
 +        else:
 +            self.raw = obj
 +
@@ -2144,8 +2146,8 @@ Index: lib/python/ctypes/preamble.py
 +        elif isinstance(obj, String):
 +            return obj
 +
-+        # Convert from str
-+        elif isinstance(obj, str):
++        # Convert from str/unicode
++        elif isinstance(obj, (str, unicode)):
 +            return cls(obj)
 +
 +        # Convert from c_char_p
@@ -2176,7 +2178,7 @@ Index: lib/python/ctypes/preamble.py
  # As of ctypes 1.0, ctypes does not support custom error-checking
  # functions on callbacks, nor does it support custom datatypes on
  # callbacks, so we must ensure that all callbacks return
-@@ -64,10 +364,12 @@
+@@ -64,10 +366,12 @@
  
  class _variadic_function(object):
  
