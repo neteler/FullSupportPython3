@@ -1,0 +1,113 @@
+Index: lib/python/temporal/c_libraries_interface.py
+===================================================================
+--- lib/python/temporal/c_libraries_interface.py	(revision 72927)
++++ lib/python/temporal/c_libraries_interface.py	(working copy)
+@@ -27,6 +27,7 @@
+ from grass.pygrass.rpc.base import RPCServerBase
+ from grass.pygrass.raster import RasterRow
+ from grass.pygrass.vector import VectorTopo
++from grass.script.utils import encode, decode
+ 
+ ###############################################################################
+ 
+@@ -238,7 +239,7 @@
+         mapset = libgis.G_mapset()
+ 
+     drstring = libtgis.tgis_get_mapset_driver_name(mapset)
+-    conn.send(drstring)
++    conn.send(drstring.data)
+ 
+ ###############################################################################
+ 
+@@ -258,13 +259,14 @@
+         if not mapset:
+             mapset = libgis.G_mapset()
+         dbstring = libtgis.tgis_get_mapset_database_name(mapset)
++        dbstring = dbstring.data
+ 
+         if dbstring:
+             # We substitute GRASS variables if they are located in the database string
+             # This behavior is in conjunction with db.connect
+-            dbstring = dbstring.replace("$GISDBASE", libgis.G_gisdbase())
+-            dbstring = dbstring.replace("$LOCATION_NAME", libgis.G_location())
+-            dbstring = dbstring.replace("$MAPSET", mapset)
++            dbstring = dbstring.replace(encode("$GISDBASE"), libgis.G_gisdbase())
++            dbstring = dbstring.replace(encode("$LOCATION_NAME"), libgis.G_location())
++            dbstring = dbstring.replace(encode("$MAPSET"), mapset)
+     except:
+         raise
+     finally:
+@@ -298,7 +300,8 @@
+ 
+             c = 0
+             while mapset[c] != "\x00":
+-                char_list += mapset[c]
++                val = decode(mapset[c])
++                char_list += val
+                 c += 1
+ 
+             if permission >= 0 and in_search_path == 1:
+@@ -566,7 +569,7 @@
+         return None
+ 
+     # Read the region information
+-    region = libgis.Cell_head()
++    region = libraster.struct_Cell_head()
+     libraster.Rast_get_cellhd(name, mapset, byref(region))
+ 
+     kvp["north"] = region.north
+Index: lib/python/temporal/temporal_algebra.py
+===================================================================
+--- lib/python/temporal/temporal_algebra.py	(revision 72927)
++++ lib/python/temporal/temporal_algebra.py	(working copy)
+@@ -462,9 +462,9 @@
+ from .factory import dataset_factory
+ from .open_stds import open_new_stds, open_old_stds
+ from .temporal_operator import TemporalOperatorParser
+-from spatio_temporal_relationships import SpatioTemporalTopologyBuilder
++from .spatio_temporal_relationships import SpatioTemporalTopologyBuilder
+ from .datetime_math import time_delta_to_relative_time, string_to_datetime
+-from abstract_space_time_dataset import AbstractSpaceTimeDataset
++from .abstract_space_time_dataset import AbstractSpaceTimeDataset
+ from .temporal_granularity import compute_absolute_time_granularity
+ 
+ from .datetime_math import create_suffix_from_datetime
+Index: lib/python/temporal/temporal_raster_base_algebra.py
+===================================================================
+--- lib/python/temporal/temporal_raster_base_algebra.py	(revision 72927)
++++ lib/python/temporal/temporal_raster_base_algebra.py	(working copy)
+@@ -56,7 +56,7 @@
+ from .abstract_dataset import AbstractDatasetComparisonKeyStartTime
+ from .factory import dataset_factory
+ from .open_stds import open_new_stds
+-from spatio_temporal_relationships import SpatioTemporalTopologyBuilder
++from .spatio_temporal_relationships import SpatioTemporalTopologyBuilder
+ from .space_time_datasets import Raster3DDataset, RasterDataset
+ from .temporal_granularity import compute_absolute_time_granularity
+ 
+Index: lib/python/temporal/temporal_vector_algebra.py
+===================================================================
+--- lib/python/temporal/temporal_vector_algebra.py	(revision 72927)
++++ lib/python/temporal/temporal_vector_algebra.py	(working copy)
+@@ -56,7 +56,7 @@
+ from .core import init_dbif, get_current_mapset
+ from .abstract_dataset import AbstractDatasetComparisonKeyStartTime
+ from .open_stds import open_new_stds
+-from spatio_temporal_relationships import SpatioTemporalTopologyBuilder
++from .spatio_temporal_relationships import SpatioTemporalTopologyBuilder
+ from .space_time_datasets import VectorDataset
+ 
+ 
+Index: lib/python/temporal/testsuite/test_register_function.py
+===================================================================
+--- lib/python/temporal/testsuite/test_register_function.py	(revision 72927)
++++ lib/python/temporal/testsuite/test_register_function.py	(working copy)
+@@ -222,7 +222,7 @@
+         map_3 = tgis.RasterDataset("register_map_null@" + tgis.get_current_mapset())
+         map_3.select()
+         start, end = map_3.get_absolute_time()
+-        self.assertEqual(start, datetime.datetime(2001, 1, 2, 02, 30, 1))
++        self.assertEqual(start, datetime.datetime(2001, 1, 2, 2, 30, 1))
+ 
+         map_list = [map_1, map_2, map_3]
+ 
