@@ -2146,6 +2146,10 @@ Index: lib/python/ctypes/preamble.py
 +        elif isinstance(obj, String):
 +            return obj
 +
++        # Convert from bytes
++        elif isinstance(obj, bytes):
++            return cls(decode(obj))
++
 +        # Convert from str/unicode
 +        elif isinstance(obj, (str, unicode)):
 +            return cls(obj)
@@ -2178,7 +2182,7 @@ Index: lib/python/ctypes/preamble.py
  # As of ctypes 1.0, ctypes does not support custom error-checking
  # functions on callbacks, nor does it support custom datatypes on
  # callbacks, so we must ensure that all callbacks return
-@@ -64,10 +366,12 @@
+@@ -64,10 +370,12 @@
  
  class _variadic_function(object):
  
