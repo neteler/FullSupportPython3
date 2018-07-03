@@ -1,6 +1,6 @@
 Index: lib/python/ctypes/ctypesgen.py
 ===================================================================
---- lib/python/ctypes/ctypesgen.py	(revision 72833)
+--- lib/python/ctypes/ctypesgen.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgen.py	(working copy)
 @@ -93,6 +93,15 @@
                    default=None, help='regular expression for symbols to always include')
@@ -48,7 +48,7 @@ Index: lib/python/ctypes/ctypesgen.py
  
 Index: lib/python/ctypes/ctypesgencore/ctypedescs.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/ctypedescs.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/ctypedescs.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/ctypedescs.py	(working copy)
 @@ -57,6 +57,19 @@
      ('va_list', True, 0): 'c_void_p',
@@ -138,7 +138,7 @@ Index: lib/python/ctypes/ctypesgencore/ctypedescs.py
  
 Index: lib/python/ctypes/ctypesgencore/descriptions.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/descriptions.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/descriptions.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/descriptions.py	(working copy)
 @@ -119,10 +119,11 @@
  class StructDescription(Description):
@@ -173,7 +173,7 @@ Index: lib/python/ctypes/ctypesgencore/descriptions.py
  
 Index: lib/python/ctypes/ctypesgencore/expressions.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/expressions.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/expressions.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/expressions.py	(working copy)
 @@ -7,7 +7,7 @@
  '''
@@ -204,7 +204,7 @@ Index: lib/python/ctypes/ctypesgencore/expressions.py
  
 Index: lib/python/ctypes/ctypesgencore/libraryloader.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/libraryloader.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/libraryloader.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/libraryloader.py	(working copy)
 @@ -36,6 +36,7 @@
  import os.path
@@ -312,7 +312,7 @@ Index: lib/python/ctypes/ctypesgencore/libraryloader.py
  
 Index: lib/python/ctypes/ctypesgencore/messages.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/messages.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/messages.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/messages.py	(working copy)
 @@ -22,10 +22,20 @@
  from __future__ import print_function
@@ -337,7 +337,7 @@ Index: lib/python/ctypes/ctypesgencore/messages.py
  
 Index: lib/python/ctypes/ctypesgencore/options.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/options.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/options.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/options.py	(working copy)
 @@ -32,7 +32,11 @@
      "other_known_names": [],
@@ -354,7 +354,7 @@ Index: lib/python/ctypes/ctypesgencore/options.py
  
 Index: lib/python/ctypes/ctypesgencore/parser/cdeclarations.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/cdeclarations.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/cdeclarations.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/cdeclarations.py	(working copy)
 @@ -130,8 +130,9 @@
  
@@ -378,7 +378,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/cdeclarations.py
          if self.declarations:
 Index: lib/python/ctypes/ctypesgencore/parser/cgrammar.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/cgrammar.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/cgrammar.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/cgrammar.py	(working copy)
 @@ -20,6 +20,10 @@
  import warnings
@@ -533,7 +533,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/cgrammar.py
  
 Index: lib/python/ctypes/ctypesgencore/parser/cparser.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/cparser.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/cparser.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/cparser.py	(working copy)
 @@ -63,7 +63,9 @@
                  t.type = t.value.upper()
@@ -583,7 +583,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/cparser.py
      DebugCParser().parse(sys.argv[1], debug=True)
 Index: lib/python/ctypes/ctypesgencore/parser/ctypesparser.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/ctypesparser.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/ctypesparser.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/ctypesparser.py	(working copy)
 @@ -18,154 +18,177 @@
  from ctypesgencore.expressions import *
@@ -900,7 +900,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/ctypesparser.py
      def handle_ctypes_variable(self, name, ctype, filename, lineno):
 Index: lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -981,7 +981,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/datacollectingparser.py
                  enum.opaque = False
 Index: lib/python/ctypes/ctypesgencore/parser/lex.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/lex.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/lex.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/lex.py	(working copy)
 @@ -43,8 +43,9 @@
  import sys
@@ -1114,7 +1114,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/lex.py
          for name, r in strsym[state]:
 Index: lib/python/ctypes/ctypesgencore/parser/lextab.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/lextab.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/lextab.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/lextab.py	(working copy)
 @@ -1,8 +1,8 @@
  # lextab.py. This file automatically created by PLY (version 2.2). Don't edit!
@@ -1129,7 +1129,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/lextab.py
  _lexstateerrorf = {'INITIAL': 't_INITIAL_error', 'DEFINE': 't_DEFINE_error'}
 Index: lib/python/ctypes/ctypesgencore/parser/pplexer.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/pplexer.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/pplexer.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/pplexer.py	(working copy)
 @@ -21,6 +21,7 @@
  from . import lex
@@ -1243,7 +1243,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/pplexer.py
  t_ANY_ignore = ' \t\v\f\r'
 Index: lib/python/ctypes/ctypesgencore/parser/preprocessor.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/preprocessor.py	(working copy)
 @@ -24,7 +24,9 @@
  from . import yacc
@@ -1303,7 +1303,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/preprocessor.py
              except IOError:
 Index: lib/python/ctypes/ctypesgencore/parser/yacc.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/parser/yacc.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/parser/yacc.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/parser/yacc.py	(working copy)
 @@ -2135,7 +2135,7 @@
      error = 0
@@ -1316,7 +1316,7 @@ Index: lib/python/ctypes/ctypesgencore/parser/yacc.py
      # Note: a module may in fact be an instance as well.
 Index: lib/python/ctypes/ctypesgencore/printer/printer.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/printer/printer.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/printer/printer.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/printer/printer.py	(working copy)
 @@ -23,7 +23,7 @@
      def __init__(self, outpath, options, data):
@@ -1797,7 +1797,7 @@ Index: lib/python/ctypes/ctypesgencore/printer_json/test.py
 +pass
 Index: lib/python/ctypes/ctypesgencore/processor/pipeline.py
 ===================================================================
---- lib/python/ctypes/ctypesgencore/processor/pipeline.py	(revision 72833)
+--- lib/python/ctypes/ctypesgencore/processor/pipeline.py	(revision 72927)
 +++ lib/python/ctypes/ctypesgencore/processor/pipeline.py	(working copy)
 @@ -54,7 +54,9 @@
      filter_by_regexes_exclude(data, options)
@@ -1812,7 +1812,7 @@ Index: lib/python/ctypes/ctypesgencore/processor/pipeline.py
      calculate_final_inclusion(data, options)
 Index: lib/python/ctypes/preamble.py
 ===================================================================
---- lib/python/ctypes/preamble.py	(revision 72833)
+--- lib/python/ctypes/preamble.py	(revision 72927)
 +++ lib/python/ctypes/preamble.py	(working copy)
 @@ -1,9 +1,14 @@
 +import ctypes
@@ -1822,7 +1822,7 @@ Index: lib/python/ctypes/preamble.py
 -import ctypes
 +import six
  from ctypes import *
-+from grass.script.utils import encode
++from grass.script.utils import encode, decode
  
 +if sys.version_info.major >= 3:
 +    long = int
@@ -1831,7 +1831,7 @@ Index: lib/python/ctypes/preamble.py
  _int_types = (c_int16, c_int32)
  if hasattr(ctypes, 'c_int64'):
      # Some builds of ctypes apparently do not have c_int64
-@@ -17,31 +22,328 @@
+@@ -17,31 +22,332 @@
  del _int_types
  
  
