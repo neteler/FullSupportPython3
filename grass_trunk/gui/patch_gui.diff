@@ -1,0 +1,94 @@
+Index: gui/wxpython/core/gconsole.py
+===================================================================
+--- gui/wxpython/core/gconsole.py	(revision 72951)
++++ gui/wxpython/core/gconsole.py	(working copy)
+@@ -27,7 +27,12 @@
+ import re
+ import time
+ import threading
+-import Queue
++
++if sys.version_info.major == 2:
++    import Queue
++else:
++    import queue as Queue
++
+ import codecs
+ import locale
+ 
+Index: gui/wxpython/core/gthread.py
+===================================================================
+--- gui/wxpython/core/gthread.py	(revision 72951)
++++ gui/wxpython/core/gthread.py	(working copy)
+@@ -19,7 +19,11 @@
+ 
+ import wx
+ 
+-import Queue
++import sys
++if sys.version_info.major == 2:
++    import Queue
++else:
++    import queue as Queue
+ 
+ from core.gconsole import EVT_CMD_DONE, wxCmdDone
+ 
+Index: gui/wxpython/gui_core/forms.py
+===================================================================
+--- gui/wxpython/gui_core/forms.py	(revision 72951)
++++ gui/wxpython/gui_core/forms.py	(working copy)
+@@ -54,7 +54,12 @@
+ import os
+ import copy
+ import locale
+-import Queue
++
++if sys.version_info.major == 2:
++    import Queue
++else:
++    import queue as Queue
++
+ import re
+ import codecs
+ 
+Index: gui/wxpython/icons/icon.py
+===================================================================
+--- gui/wxpython/icons/icon.py	(revision 72951)
++++ gui/wxpython/icons/icon.py	(working copy)
+@@ -25,9 +25,10 @@
+ from core.utils import _
+ 
+ # default icon set
+-import grass_icons
+-iconSetDefault = grass_icons.iconSet
+-iconPathDefault = grass_icons.iconPath
++from .grass_icons import iconSet as g_iconSet
++from .grass_icons import iconPath as g_iconPath
++iconSetDefault = g_iconSet
++iconPathDefault = g_iconPath
+ 
+ iconTheme = UserSettings.Get(
+     group='appearance',
+Index: gui/wxpython/mapdisp/test_mapdisp.py
+===================================================================
+--- gui/wxpython/mapdisp/test_mapdisp.py	(revision 72951)
++++ gui/wxpython/mapdisp/test_mapdisp.py	(working copy)
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ ############################################################################
+ #
+Index: gui/wxpython/rlisetup/sampling_frame.py
+===================================================================
+--- gui/wxpython/rlisetup/sampling_frame.py	(revision 72951)
++++ gui/wxpython/rlisetup/sampling_frame.py	(working copy)
+@@ -47,7 +47,7 @@
+ from grass.pydispatch.signal import Signal
+ from grass.pydispatch.errors import DispatcherKeyError
+ 
+-from functions import SamplingType, checkMapExists
++from .functions import SamplingType, checkMapExists
+ 
+ 
+ class Circle:
