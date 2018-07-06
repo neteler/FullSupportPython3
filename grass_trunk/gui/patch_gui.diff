@@ -1,3 +1,18 @@
+Index: gui/wxpython/core/gcmd.py
+===================================================================
+--- gui/wxpython/core/gcmd.py	(revision 72951)
++++ gui/wxpython/core/gcmd.py	(working copy)
+@@ -703,8 +703,8 @@
+     :return: returncode, stdout, messages (read == True and getErrorMsg == True)
+     :return: stdout, stderr
+     """
+-    cmdString = ' '.join(grass.make_command(prog, flags, overwrite,
+-                                            quiet, verbose, **kwargs))
++    cmdString = b' '.join(grass.make_command(prog, flags, overwrite,
++                                             quiet, verbose, **kwargs))
+ 
+     Debug.msg(1, "gcmd.RunCommand(): %s" % cmdString)
+ 
 Index: gui/wxpython/core/gconsole.py
 ===================================================================
 --- gui/wxpython/core/gconsole.py	(revision 72951)
@@ -51,6 +66,32 @@ Index: gui/wxpython/gui_core/forms.py
  import re
  import codecs
  
+Index: gui/wxpython/gui_core/goutput.py
+===================================================================
+--- gui/wxpython/gui_core/goutput.py	(revision 72951)
++++ gui/wxpython/gui_core/goutput.py	(working copy)
+@@ -629,7 +629,7 @@
+             group='appearance',
+             key='outputfont',
+             subkey='size')
+-        if typesize is None or typesize <= 0:
++        if typesize is None or int(typesize) <= 0:
+             typesize = 10
+         typesize = float(typesize)
+ 
+Index: gui/wxpython/gui_core/menu.py
+===================================================================
+--- gui/wxpython/gui_core/menu.py	(revision 72951)
++++ gui/wxpython/gui_core/menu.py	(working copy)
+@@ -149,7 +149,7 @@
+ 
+         # tree
+         self._tree = CTreeView(model=model, parent=self)
+-        self._tree.SetToolTipString(
++        self._tree.SetToolTip(
+             _("Double-click or Ctrl-Enter to run selected module"))
+ 
+ #        self._dataBox = wx.StaticBox(parent = self, id = wx.ID_ANY,
 Index: gui/wxpython/icons/icon.py
 ===================================================================
 --- gui/wxpython/icons/icon.py	(revision 72951)
