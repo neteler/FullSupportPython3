@@ -144,7 +144,19 @@ Index: gui/wxpython/core/utils.py
  
  from grass.script import core as grass
  from grass.script import task as gtask
-@@ -731,7 +732,7 @@
+@@ -324,7 +325,10 @@
+ 
+ def ListSortLower(list):
+     """Sort list items (not case-sensitive)"""
+-    list.sort(cmp=lambda x, y: cmp(x.lower(), y.lower()))
++    if sys.version_info.major == 2:
++        list.sort(cmp=lambda x, y: cmp(x.lower(), y.lower()))
++    else:
++        list.sort(key=lambda x: x.lower())
+ 
+ 
+ def GetVectorNumberOfLayers(vector):
+@@ -731,7 +735,7 @@
          else:
              formats['file'].append(name)
  
@@ -153,7 +165,7 @@ Index: gui/wxpython/core/utils.py
          items.sort()
  
      return formats
-@@ -917,7 +918,7 @@
+@@ -917,7 +921,7 @@
      else:
          expCmd = 'export'
  
@@ -1360,6 +1372,19 @@ Index: gui/wxpython/mapdisp/main.py
                  try_remove(f)
  
      def watcher(self):
+Index: gui/wxpython/mapdisp/statusbar.py
+===================================================================
+--- gui/wxpython/mapdisp/statusbar.py	(revision 72963)
++++ gui/wxpython/mapdisp/statusbar.py	(working copy)
+@@ -44,7 +44,7 @@
+ from grass.pydispatch.signal import Signal
+ 
+ 
+-class SbException:
++class SbException(Exception):
+     """Exception class used in SbManager and SbItems"""
+ 
+     def __init__(self, message):
 Index: gui/wxpython/mapdisp/test_mapdisp.py
 ===================================================================
 --- gui/wxpython/mapdisp/test_mapdisp.py	(revision 72963)
