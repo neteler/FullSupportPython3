@@ -90,6 +90,19 @@ Index: gui/wxpython/core/gthread.py
  
  from core.gconsole import EVT_CMD_DONE, wxCmdDone
  
+Index: gui/wxpython/core/render.py
+===================================================================
+--- gui/wxpython/core/render.py	(revision 72963)
++++ gui/wxpython/core/render.py	(working copy)
+@@ -1154,7 +1154,7 @@
+         """
+         selected = []
+ 
+-        if isinstance(ltype, types.StringType):
++        if isinstance(ltype, str):
+             one_type = True
+         else:
+             one_type = False
 Index: gui/wxpython/core/treemodel.py
 ===================================================================
 --- gui/wxpython/core/treemodel.py	(revision 72963)
@@ -1443,6 +1456,19 @@ Index: gui/wxpython/mapwin/base.py
              if event != containerEv:
                  continue
              try:
+Index: gui/wxpython/mapwin/buffered.py
+===================================================================
+--- gui/wxpython/mapwin/buffered.py	(revision 72963)
++++ gui/wxpython/mapwin/buffered.py	(working copy)
+@@ -807,7 +807,7 @@
+         else:
+             img = None
+ 
+-        for key in self.imagedict.keys():
++        for key in list(self.imagedict):
+             if self.imagedict[key]['id'] == imgId:
+                 del self.imagedict[key]
+ 
 Index: gui/wxpython/modules/colorrules.py
 ===================================================================
 --- gui/wxpython/modules/colorrules.py	(revision 72963)
