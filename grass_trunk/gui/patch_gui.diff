@@ -1,6 +1,48 @@
+Index: gui/wxpython/animation/frame.py
+===================================================================
+--- gui/wxpython/animation/frame.py	(revision 72963)
++++ gui/wxpython/animation/frame.py	(working copy)
+@@ -22,6 +22,7 @@
+ import wx
+ import wx.aui
+ import tempfile
++import six
+ 
+ import grass.script as gcore
+ import grass.temporal as tgis
+@@ -136,7 +137,7 @@
+                           Name('animPanel').CentrePane().CaptionVisible(False).PaneBorder(False).
+                           Floatable(False).BestSize((-1, -1)).
+                           CloseButton(False).DestroyOnClose(True).Layer(0))
+-        for name, slider in self.animationSliders.iteritems():
++        for name, slider in six.iteritems(self.animationSliders):
+             self._mgr.AddPane(
+                 slider,
+                 wx.aui.AuiPaneInfo().PaneBorder(False).Name(
+Index: gui/wxpython/animation/utils.py
+===================================================================
+--- gui/wxpython/animation/utils.py	(revision 72963)
++++ gui/wxpython/animation/utils.py	(working copy)
+@@ -20,6 +20,7 @@
+ import os
+ import wx
+ import hashlib
++import six
+ from multiprocessing import cpu_count
+ try:
+     from PIL import Image
+@@ -97,7 +98,7 @@
+                 raise GException(_("Map <%s> not found.") % name)
+         else:
+             found = False
+-            for mapset, mapNames in mapDict.iteritems():
++            for mapset, mapNames in six.iteritems(mapDict):
+                 if name in mapNames:
+                     found = True
+                     newNames.append(name + "@" + mapset)
 Index: gui/wxpython/core/gcmd.py
 ===================================================================
---- gui/wxpython/core/gcmd.py	(revision 72951)
+--- gui/wxpython/core/gcmd.py	(revision 72963)
 +++ gui/wxpython/core/gcmd.py	(working copy)
 @@ -703,8 +703,8 @@
      :return: returncode, stdout, messages (read == True and getErrorMsg == True)
@@ -15,7 +57,7 @@ Index: gui/wxpython/core/gcmd.py
  
 Index: gui/wxpython/core/gconsole.py
 ===================================================================
---- gui/wxpython/core/gconsole.py	(revision 72951)
+--- gui/wxpython/core/gconsole.py	(revision 72963)
 +++ gui/wxpython/core/gconsole.py	(working copy)
 @@ -27,7 +27,12 @@
  import re
@@ -33,7 +75,7 @@ Index: gui/wxpython/core/gconsole.py
  
 Index: gui/wxpython/core/gthread.py
 ===================================================================
---- gui/wxpython/core/gthread.py	(revision 72951)
+--- gui/wxpython/core/gthread.py	(revision 72963)
 +++ gui/wxpython/core/gthread.py	(working copy)
 @@ -19,7 +19,11 @@
  
@@ -48,15 +90,592 @@ Index: gui/wxpython/core/gthread.py
  
  from core.gconsole import EVT_CMD_DONE, wxCmdDone
  
+Index: gui/wxpython/core/treemodel.py
+===================================================================
+--- gui/wxpython/core/treemodel.py	(revision 72963)
++++ gui/wxpython/core/treemodel.py	(working copy)
+@@ -15,6 +15,7 @@
+ 
+ @author Anna Petrasova <kratochanna gmail.com>
+ """
++import six
+ 
+ 
+ class TreeModel(object):
+@@ -174,7 +175,7 @@
+     def nprint(self, text, indent=0):
+         text.append(indent * ' ' + self.label)
+         if self.data:
+-            for key, value in self.data.iteritems():
++            for key, value in six.iteritems(self.data):
+                 text.append(
+                     "%(indent)s* %(key)s : %(value)s" %
+                     {'indent': (indent + 2) * ' ', 'key': key, 'value': value})
+Index: gui/wxpython/core/units.py
+===================================================================
+--- gui/wxpython/core/units.py	(revision 72963)
++++ gui/wxpython/core/units.py	(working copy)
+@@ -21,6 +21,7 @@
+ @author Martin Landa <landa.martin gmail.com>
+ """
+ 
++import six
+ import math
+ 
+ if __name__ == '__main__':
+@@ -79,7 +80,7 @@
+ 
+         :return: index
+         """
+-        for k, u in self._units[type].iteritems():
++        for k, u in six.iteritems(self._units[type]):
+             if u['key'] == key:
+                 return k
+         return 0
+Index: gui/wxpython/core/utils.py
+===================================================================
+--- gui/wxpython/core/utils.py	(revision 72963)
++++ gui/wxpython/core/utils.py	(working copy)
+@@ -20,6 +20,7 @@
+ import shlex
+ import re
+ import inspect
++import six
+ 
+ from grass.script import core as grass
+ from grass.script import task as gtask
+@@ -731,7 +732,7 @@
+         else:
+             formats['file'].append(name)
+ 
+-    for items in formats.itervalues():
++    for items in six.itervalues(formats):
+         items.sort()
+ 
+     return formats
+@@ -917,7 +918,7 @@
+     else:
+         expCmd = 'export'
+ 
+-    for key, value in environ.iteritems():
++    for key, value in six.iteritems(environ):
+         fd.write('%s %s=%s\n' % (expCmd, key, value))
+ 
+     # write also skipped lines
+Index: gui/wxpython/core/workspace.py
+===================================================================
+--- gui/wxpython/core/workspace.py	(revision 72963)
++++ gui/wxpython/core/workspace.py	(working copy)
+@@ -19,6 +19,7 @@
+ import os
+ 
+ import wx
++import six
+ 
+ from core.utils import normalize_whitespace, _
+ from core.settings import UserSettings
+@@ -976,7 +977,7 @@
+                     '%s<task name="%s">\n' %
+                     (' ' * self.indent, cmd[0]))
+                 self.indent += 4
+-                for key, val in cmd[1].iteritems():
++                for key, val in six.iteritems(cmd[1]):
+                     if key == 'flags':
+                         for f in val:
+                             self.file.write('%s<flag name="%s" />\n' %
+@@ -1003,7 +1004,7 @@
+                     self.file.write('%s<vdigit>\n' % (' ' * self.indent))
+                     if 'geomAttr' in vdigit:
+                         self.indent += 4
+-                        for type, val in vdigit['geomAttr'].iteritems():
++                        for type, val in six.iteritems(vdigit['geomAttr']):
+                             units = ''
+                             if val['units'] != 'mu':
+                                 units = ' units="%s"' % val['units']
+@@ -1038,13 +1039,13 @@
+         self.indent += 4
+         self.file.write('%s<surface>\n' % (' ' * self.indent))
+         self.indent += 4
+-        for attrb in data.iterkeys():
++        for attrb in six.iterkeys(data):
+             if len(data[attrb]) < 1:  # skip empty attributes
+                 continue
+             if attrb == 'object':
+                 continue
+ 
+-            for name in data[attrb].iterkeys():
++            for name in six.iterkeys(data[attrb]):
+                 # surface attribute
+                 if attrb == 'attribute':
+                     if data[attrb][name]['map'] is None:
+@@ -1064,7 +1065,7 @@
+             if attrb == 'draw':
+                 self.file.write('%s<%s' % (' ' * self.indent, attrb))
+                 if 'mode' in data[attrb]:
+-                    for tag, value in data[attrb]['mode']['desc'].iteritems():
++                    for tag, value in six.iteritems(data[attrb]['mode']['desc']):
+                         self.file.write(' %s="%s"' % (tag, value))
+                 self.file.write('>\n')  # <draw ...>
+ 
+@@ -1121,7 +1122,7 @@
+         self.indent += 4
+         self.file.write('%s<volume>\n' % (' ' * self.indent))
+         self.indent += 4
+-        for attrb in data.iterkeys():
++        for attrb in six.iterkeys(data):
+             if len(data[attrb]) < 1:  # skip empty attributes
+                 continue
+             if attrb == 'object':
+@@ -1128,7 +1129,7 @@
+                 continue
+ 
+             if attrb == 'attribute':
+-                for name in data[attrb].iterkeys():
++                for name in six.iterkeys(data[attrb]):
+                     # surface attribute
+                     if data[attrb][name]['map'] is None:
+                         continue
+@@ -1211,10 +1212,10 @@
+             if attrb == 'isosurface':
+                 for isosurface in data[attrb]:
+                     self.file.write('%s<%s>\n' % (' ' * self.indent, attrb))
+-                    for name in isosurface.iterkeys():
++                    for name in six.iterkeys(isosurface):
+                         self.indent += 4
+                         self.file.write('%s<%s>\n' % (' ' * self.indent, name))
+-                        for att in isosurface[name].iterkeys():
++                        for att in six.iterkeys(isosurface[name]):
+                             if isosurface[name][att] is True:
+                                 val = '1'
+                             elif isosurface[name][att] is False:
+@@ -1242,10 +1243,10 @@
+             if attrb == 'slice':
+                 for slice_ in data[attrb]:
+                     self.file.write('%s<%s>\n' % (' ' * self.indent, attrb))
+-                    for name in slice_.iterkeys():
++                    for name in six.iterkeys(slice_):
+                         self.indent += 4
+                         self.file.write('%s<%s>\n' % (' ' * self.indent, name))
+-                        for att in slice_[name].iterkeys():
++                        for att in six.iterkeys(slice_[name]):
+                             if att in ('map', 'update'):
+                                 continue
+                             val = slice_[name][att]
+@@ -1275,7 +1276,7 @@
+         :param data: Nviz layer properties
+         """
+         self.indent += 4
+-        for attrb in data.iterkeys():
++        for attrb in six.iterkeys(data):
+             if len(data[attrb]) < 1:  # skip empty attributes
+                 continue
+ 
+@@ -1292,7 +1293,7 @@
+                                                            attrb,
+                                                            marker))
+             self.indent += 4
+-            for name in data[attrb].iterkeys():
++            for name in six.iterkeys(data[attrb]):
+                 if name in ('object', 'marker'):
+                     continue
+                 if name == 'mode':
+@@ -1318,7 +1319,7 @@
+                     self.file.write('%s</%s>\n' % ((' ' * self.indent, name)))
+                 elif name == 'thematic':
+                     self.file.write('%s<%s ' % (' ' * self.indent, name))
+-                    for key in data[attrb][name].iterkeys():
++                    for key in six.iterkeys(data[attrb][name]):
+                         if key.startswith('use'):
+                             self.file.write(
+                                 '%s="%s" ' %
+@@ -1325,7 +1326,7 @@
+                                 (key, int(data[attrb][name][key])))
+                     self.file.write('>\n')
+                     self.indent += 4
+-                    for key, value in data[attrb][name].iteritems():
++                    for key, value in six.iteritems(data[attrb][name]):
+                         if key.startswith('use'):
+                             continue
+                         if value is None:
+Index: gui/wxpython/core/ws.py
+===================================================================
+--- gui/wxpython/core/ws.py	(revision 72963)
++++ gui/wxpython/core/ws.py	(working copy)
+@@ -19,6 +19,7 @@
+ import sys
+ import copy
+ import time
++import six
+ 
+ import wx
+ from wx.lib.newevent import NewEvent
+@@ -213,7 +214,7 @@
+         """Create string for GRASS_REGION env variable from  dict created by _getRegionDict.
+         """
+         regionStr = ''
+-        for k, v in region.iteritems():
++        for k, v in six.iteritems(region):
+             item = k + ': ' + str(v)
+             if regionStr:
+                 regionStr += '; '
+@@ -356,7 +357,7 @@
+         if sXsize < 1 or sYsize < 1:
+             return
+ 
+-        for sBandNnum, tBandNum in sTBands.iteritems():
++        for sBandNnum, tBandNum in six.iteritems(sTBands):
+             bandData = sDataset.GetRasterBand(sBandNnum).ReadRaster(
+                 sXoff, sYoff, sXsize, sYsize, tXsize, tYsize, gdal.GDT_Byte)
+             self.tDataset.GetRasterBand(tBandNum).WriteRaster(
+Index: gui/wxpython/dbmgr/dialogs.py
+===================================================================
+--- gui/wxpython/dbmgr/dialogs.py	(revision 72963)
++++ gui/wxpython/dbmgr/dialogs.py	(working copy)
+@@ -19,6 +19,7 @@
+ 
+ import os
+ import types
++import six
+ 
+ from core import globalvar
+ from core.utils import _
+@@ -591,7 +592,7 @@
+         table = self.mapDBInfo.GetTable(layer)
+         columns = self.mapDBInfo.GetTableDesc(table)
+ 
+-        for key, col in columns.iteritems():
++        for key, col in six.iteritems(columns):
+             if key == column:
+                 col['values'] = [col['ctype'](value), ]
+                 break
+Index: gui/wxpython/dbmgr/sqlbuilder.py
+===================================================================
+--- gui/wxpython/dbmgr/sqlbuilder.py	(revision 72963)
++++ gui/wxpython/dbmgr/sqlbuilder.py	(working copy)
+@@ -28,6 +28,7 @@
+ 
+ import os
+ import sys
++import six
+ 
+ from core import globalvar
+ from core.utils import _
+@@ -149,7 +150,7 @@
+                           'prc': ['%', ]}
+ 
+         self.btn_logicpanel = wx.Panel(parent=self.panel, id=wx.ID_ANY)
+-        for key, value in self.btn_logic.iteritems():
++        for key, value in six.iteritems(self.btn_logic):
+             btn = wx.Button(parent=self.btn_logicpanel, id=wx.ID_ANY,
+                             label=value[0])
+             self.btn_logic[key].append(btn.GetId())
+@@ -339,7 +340,7 @@
+         self.btn_unique.Bind(wx.EVT_BUTTON, self.OnUniqueValues)
+         self.btn_uniquesample.Bind(wx.EVT_BUTTON, self.OnSampleValues)
+ 
+-        for key, value in self.btn_logic.iteritems():
++        for key, value in six.iteritems(self.btn_logic):
+             self.FindWindowById(value[1]).Bind(wx.EVT_BUTTON, self.OnAddMark)
+ 
+         self.btn_close.Bind(wx.EVT_BUTTON, self.OnClose)
+@@ -454,7 +455,7 @@
+                 self.btn_arithmeticpanel.IsShown():
+             btns = self.btn_arithmetic
+ 
+-        for key, value in btns.iteritems():
++        for key, value in six.iteritems(btns):
+             if event.GetId() == value[1]:
+                 mark = value[0]
+                 break
+@@ -659,7 +660,7 @@
+ 
+         self.btn_arithmeticpanel = wx.Panel(parent=self.panel, id=wx.ID_ANY)
+ 
+-        for key, value in self.btn_arithmetic.iteritems():
++        for key, value in six.iteritems(self.btn_arithmetic):
+             btn = wx.Button(parent=self.btn_arithmeticpanel, id=wx.ID_ANY,
+                             label=value[0])
+             self.btn_arithmetic[key].append(btn.GetId())
+@@ -716,7 +717,7 @@
+                            proportion=1, flag=wx.EXPAND)
+ 
+         self.list_func.Bind(wx.EVT_LISTBOX, self.OnAddFunc)
+-        for key, value in self.btn_arithmetic.iteritems():
++        for key, value in six.iteritems(self.btn_arithmetic):
+             self.FindWindowById(value[1]).Bind(wx.EVT_BUTTON, self.OnAddMark)
+         self.mode.SetSelection(0)
+         self.OnMode(None)
+Index: gui/wxpython/dbmgr/vinfo.py
+===================================================================
+--- gui/wxpython/dbmgr/vinfo.py	(revision 72963)
++++ gui/wxpython/dbmgr/vinfo.py	(working copy)
+@@ -16,6 +16,7 @@
+ 
+ import os
+ import types
++import six
+ 
+ import wx
+ 
+@@ -93,7 +94,7 @@
+         except KeyError:
+             return []
+ 
+-        for name, desc in self.tables[table].iteritems():
++        for name, desc in six.iteritems(self.tables[table]):
+             names[desc['index']] = name
+ 
+         return names
+@@ -131,7 +132,7 @@
+                 continue
+ 
+             table = record['Table']
+-            for key, value in record['Attributes'].iteritems():
++            for key, value in six.iteritems(record['Attributes']):
+                 if len(value) < 1:
+                     value = None
+                 else:
+@@ -141,7 +142,7 @@
+                         value = GetUnicodeValue(value)
+                 self.tables[table][key]['values'].append(value)
+ 
+-            for key, value in record.iteritems():
++            for key, value in six.iteritems(record):
+                 if key == 'Attributes':
+                     continue
+                 if key in ret:
+Index: gui/wxpython/gcp/manager.py
+===================================================================
+--- gui/wxpython/gcp/manager.py	(revision 72963)
++++ gui/wxpython/gcp/manager.py	(working copy)
+@@ -32,6 +32,7 @@
+ import sys
+ import shutil
+ import time
++import six
+ from copy import copy
+ 
+ import wx
+@@ -1261,7 +1262,7 @@
+                    "ucolor": "unused"}
+         wpx = UserSettings.Get(group='gcpman', key='symbol', subkey='width')
+ 
+-        for k, v in colours.iteritems():
++        for k, v in six.iteritems(colours):
+             col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
+             self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
+                 col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+Index: gui/wxpython/gmodeler/dialogs.py
+===================================================================
+--- gui/wxpython/gmodeler/dialogs.py	(revision 72963)
++++ gui/wxpython/gmodeler/dialogs.py	(working copy)
+@@ -25,6 +25,7 @@
+ 
+ import os
+ import sys
++import six
+ 
+ import wx
+ import wx.lib.mixins.listctrl as listmix
+@@ -743,7 +744,7 @@
+         """Populate the list"""
+         self.itemDataMap = dict()
+         i = 0
+-        for name, values in data.iteritems():
++        for name, values in six.iteritems(data):
+             self.itemDataMap[i] = [name, values['type'],
+                                    values.get('value', ''),
+                                    values.get('description', '')]
+@@ -752,7 +753,7 @@
+         self.itemCount = len(self.itemDataMap.keys())
+         self.DeleteAllItems()
+         i = 0
+-        for name, vtype, value, desc in self.itemDataMap.itervalues():
++        for name, vtype, value, desc in six.itervalues(self.itemDataMap):
+             index = self.InsertStringItem(i, name)
+             self.SetStringItem(index, 0, name)
+             self.SetStringItem(index, 1, vtype)
+@@ -767,7 +768,7 @@
+         :return: None on success
+         :return: error string
+         """
+-        for iname, ivtype, ivalue, idesc in self.itemDataMap.itervalues():
++        for iname, ivtype, ivalue, idesc in six.itervalues(self.itemDataMap):
+             if iname == name:
+                 return _("Variable <%s> already exists in the model. "
+                          "Adding variable failed.") % name
+@@ -937,7 +938,7 @@
+         self.DeleteAllItems()
+         i = 0
+         if len(self.columns) == 2:
+-            for name, desc in self.itemDataMap.itervalues():
++            for name, desc in six.itervalues(self.itemDataMap):
+                 index = self.InsertStringItem(i, str(i))
+                 self.SetStringItem(index, 0, name)
+                 self.SetStringItem(index, 1, desc)
+@@ -946,7 +947,7 @@
+                     self.CheckItem(index, True)
+                 i += 1
+         else:
+-            for name, inloop, param, desc in self.itemDataMap.itervalues():
++            for name, inloop, param, desc in six.itervalues(self.itemDataMap):
+                 index = self.InsertStringItem(i, str(i))
+                 self.SetStringItem(index, 0, name)
+                 self.SetStringItem(index, 1, inloop)
+Index: gui/wxpython/gmodeler/frame.py
+===================================================================
+--- gui/wxpython/gmodeler/frame.py	(revision 72963)
++++ gui/wxpython/gmodeler/frame.py	(working copy)
+@@ -27,6 +27,7 @@
+ import copy
+ import re
+ import random
++import six
+ 
+ import wx
+ from wx.lib import ogl
+@@ -380,7 +381,7 @@
+         dlg.Init(properties)
+         if dlg.ShowModal() == wx.ID_OK:
+             self.ModelChanged()
+-            for key, value in dlg.GetValues().iteritems():
++            for key, value in six.iteritems(dlg.GetValues()):
+                 properties[key] = value
+             for action in self.model.GetItems(objType=ModelAction):
+                 action.GetTask().set_flag('overwrite', properties['overwrite'])
+@@ -1845,7 +1846,7 @@
+     def UpdateModelVariables(self):
+         """Update model variables"""
+         variables = dict()
+-        for values in self.list.GetData().itervalues():
++        for values in six.itervalues(self.list.GetData()):
+             name = values[0]
+             variables[name] = {'type': str(values[1])}
+             if values[2]:
+Index: gui/wxpython/gmodeler/model.py
+===================================================================
+--- gui/wxpython/gmodeler/model.py	(revision 72963)
++++ gui/wxpython/gmodeler/model.py	(working copy)
+@@ -32,6 +32,7 @@
+ import re
+ import mimetypes
+ import time
++import six
+ try:
+     import xml.etree.ElementTree as etree
+ except ImportError:
+@@ -119,7 +120,7 @@
+ 
+     def ReorderItems(self, idxList):
+         items = list()
+-        for oldIdx, newIdx in idxList.iteritems():
++        for oldIdx, newIdx in six.iteritems(idxList):
+             item = self.items.pop(oldIdx)
+             items.append(item)
+             self.items.insert(newIdx, item)
+@@ -655,7 +656,7 @@
+                 return
+ 
+             err = list()
+-            for key, item in params.iteritems():
++            for key, item in six.iteritems(params):
+                 for p in item['params']:
+                     if p.get('value', '') == '':
+                         err.append(
+@@ -752,7 +753,7 @@
+ 
+         # discard values
+         if params:
+-            for item in params.itervalues():
++            for item in six.itervalues(params):
+                 for p in item['params']:
+                     p['value'] = ''
+ 
+@@ -821,7 +822,7 @@
+             result["variables"] = {'flags': list(),
+                                    'params': params,
+                                    'idx': idx}
+-            for name, values in self.variables.iteritems():
++            for name, values in six.iteritems(self.variables):
+                 gtype = values.get('type', 'string')
+                 if gtype in ('raster', 'vector', 'mapset',
+                              'file', 'region', 'dir'):
+@@ -2278,7 +2279,7 @@
+             return
+         self.fd.write('%s<variables>\n' % (' ' * self.indent))
+         self.indent += 4
+-        for name, values in self.variables.iteritems():
++        for name, values in six.iteritems(self.variables):
+             self.fd.write(
+                 '%s<variable name="%s" type="%s">\n' %
+                 (' ' * self.indent, EncodeString(name), values['type']))
+@@ -2331,7 +2332,7 @@
+         self.indent += 4
+         if not action.IsEnabled():
+             self.fd.write('%s<disabled />\n' % (' ' * self.indent))
+-        for key, val in action.GetParams().iteritems():
++        for key, val in six.iteritems(action.GetParams()):
+             if key == 'flags':
+                 for f in val:
+                     if f.get('value', False) or f.get('parameterized', False):
+@@ -2576,7 +2577,7 @@
+ """ % (EncodeString(' '.join(properties['description'].splitlines()))))
+ 
+         variables = self.model.GetVariables()
+-        for key, data in variables.iteritems():
++        for key, data in six.iteritems(variables):
+             otype = self._getStandardizedOption(data['type'])
+             self.fd.write(
+                 r"""
+@@ -2870,7 +2871,7 @@
+     def _createPages(self):
+         """Create for each parameterized module its own page"""
+         nameOrdered = [''] * len(self.params.keys())
+-        for name, params in self.params.iteritems():
++        for name, params in six.iteritems(self.params):
+             nameOrdered[params['idx']] = name
+         for name in nameOrdered:
+             params = self.params[name]
+Index: gui/wxpython/gui_core/dialogs.py
+===================================================================
+--- gui/wxpython/gui_core/dialogs.py	(revision 72963)
++++ gui/wxpython/gui_core/dialogs.py	(working copy)
+@@ -31,6 +31,7 @@
+ import os
+ import sys
+ import re
++import six
+ 
+ import wx
+ 
+@@ -1061,7 +1062,7 @@
+         """Get layers"""
+         if self.edit_subg:
+             layers = []
+-            for maps, sel in self.subgmaps.iteritems():
++            for maps, sel in six.iteritems(self.subgmaps):
+                 if sel:
+                     layers.append(maps)
+         else:
+@@ -1106,7 +1107,7 @@
+         self.subgListBox.Set(maps)
+ 
+         for i, m in enumerate(maps):
+-            if m in self.subgmaps.iterkeys() and self.subgmaps[m]:
++            if m in six.iterkeys(self.subgmaps) and self.subgmaps[m]:
+                 self.subgListBox.Check(i)
+ 
+         self._checkSubGSellAll()
 Index: gui/wxpython/gui_core/forms.py
 ===================================================================
---- gui/wxpython/gui_core/forms.py	(revision 72951)
+--- gui/wxpython/gui_core/forms.py	(revision 72963)
 +++ gui/wxpython/gui_core/forms.py	(working copy)
-@@ -54,7 +54,12 @@
+@@ -54,7 +54,13 @@
  import os
  import copy
  import locale
 -import Queue
++import six
 +
 +if sys.version_info.major == 2:
 +    import Queue
@@ -66,9 +685,39 @@ Index: gui/wxpython/gui_core/forms.py
  import re
  import codecs
  
+@@ -2484,7 +2490,7 @@
+         self.OnUpdateSelection(event)
+ 
+     def OnUpdateDialog(self, event):
+-        for fn, kwargs in event.data.iteritems():
++        for fn, kwargs in six.iteritems(event.data):
+             fn(**kwargs)
+ 
+         self.parent.updateValuesHook()
+Index: gui/wxpython/gui_core/ghelp.py
+===================================================================
+--- gui/wxpython/gui_core/ghelp.py	(revision 72963)
++++ gui/wxpython/gui_core/ghelp.py	(working copy)
+@@ -23,6 +23,7 @@
+ import re
+ import textwrap
+ import sys
++import six
+ 
+ import wx
+ from wx.html import HtmlWindow
+@@ -593,7 +594,7 @@
+         # else:
+         # panel.Collapse(True)
+         pageSizer = wx.BoxSizer(wx.VERTICAL)
+-        for k, v in js.iteritems():
++        for k, v in six.iteritems(js):
+             if k != 'total' and k != 'name':
+                 box = self._langBox(win, k, v)
+                 pageSizer.Add(box, proportion=1,
 Index: gui/wxpython/gui_core/goutput.py
 ===================================================================
---- gui/wxpython/gui_core/goutput.py	(revision 72951)
+--- gui/wxpython/gui_core/goutput.py	(revision 72963)
 +++ gui/wxpython/gui_core/goutput.py	(working copy)
 @@ -629,7 +629,7 @@
              group='appearance',
@@ -79,9 +728,80 @@ Index: gui/wxpython/gui_core/goutput.py
              typesize = 10
          typesize = float(typesize)
  
+Index: gui/wxpython/gui_core/gselect.py
+===================================================================
+--- gui/wxpython/gui_core/gselect.py	(revision 72963)
++++ gui/wxpython/gui_core/gselect.py	(working copy)
+@@ -47,6 +47,7 @@
+ import sys
+ import glob
+ import copy
++import six
+ 
+ import wx
+ 
+@@ -526,7 +527,7 @@
+ 
+         # add extra items first
+         if self.extraItems:
+-            for group, items in self.extraItems.iteritems():
++            for group, items in six.iteritems(self.extraItems):
+                 node = self.AddItem(group, node=True)
+                 self.seltree.SetItemTextColour(node, wx.Colour(50, 50, 200))
+                 for item in items:
+@@ -1124,16 +1125,16 @@
+             columnchoices = dbInfo.GetTableDesc(table)
+             keyColumn = dbInfo.GetKeyColumn(layer)
+             self.columns = len(columnchoices.keys()) * ['']
+-            for key, val in columnchoices.iteritems():
++            for key, val in six.iteritems(columnchoices):
+                 self.columns[val['index']] = key
+             if excludeKey:  # exclude key column
+                 self.columns.remove(keyColumn)
+             if excludeCols:  # exclude key column
+-                for key in columnchoices.iterkeys():
++                for key in six.iterkeys(columnchoices):
+                     if key in excludeCols:
+                         self.columns.remove(key)
+             if type:  # only selected column types
+-                for key, value in columnchoices.iteritems():
++                for key, value in six.iteritems(columnchoices):
+                     if value['type'] not in type:
+                         try:
+                             self.columns.remove(key)
+@@ -1647,7 +1648,7 @@
+                     dsn = v
+                     break
+             optList = list()
+-            for k, v in data.iteritems():
++            for k, v in six.iteritems(data):
+                 if k in ('format', 'conninfo', 'topology'):
+                     continue
+                 optList.append('%s=%s' % (k, v))
+Index: gui/wxpython/gui_core/mapdisp.py
+===================================================================
+--- gui/wxpython/gui_core/mapdisp.py	(revision 72963)
++++ gui/wxpython/gui_core/mapdisp.py	(working copy)
+@@ -21,6 +21,7 @@
+ 
+ import os
+ import sys
++import six
+ 
+ import wx
+ 
+@@ -333,7 +334,7 @@
+ 
+     def StatusbarEnableLongHelp(self, enable=True):
+         """Enable/disable toolbars long help"""
+-        for toolbar in self.toolbars.itervalues():
++        for toolbar in six.itervalues(self.toolbars):
+             toolbar.EnableLongHelp(enable)
+ 
+     def IsStandalone(self):
 Index: gui/wxpython/gui_core/menu.py
 ===================================================================
---- gui/wxpython/gui_core/menu.py	(revision 72951)
+--- gui/wxpython/gui_core/menu.py	(revision 72963)
 +++ gui/wxpython/gui_core/menu.py	(working copy)
 @@ -149,7 +149,7 @@
  
@@ -92,11 +812,103 @@ Index: gui/wxpython/gui_core/menu.py
              _("Double-click or Ctrl-Enter to run selected module"))
  
  #        self._dataBox = wx.StaticBox(parent = self, id = wx.ID_ANY,
+Index: gui/wxpython/gui_core/query.py
+===================================================================
+--- gui/wxpython/gui_core/query.py	(revision 72963)
++++ gui/wxpython/gui_core/query.py	(working copy)
+@@ -15,6 +15,7 @@
+ """
+ import os
+ import wx
++import six
+ 
+ from core.utils import _
+ from core.gcmd import DecodeString
+@@ -217,7 +218,7 @@
+     :return: tree model
+     """
+     def addNode(parent, data, model):
+-        for k, v in data.iteritems():
++        for k, v in six.iteritems(data):
+             if isinstance(v, str):
+                 k = DecodeString(k)
+             if isinstance(v, dict):
+Index: gui/wxpython/gui_core/widgets.py
+===================================================================
+--- gui/wxpython/gui_core/widgets.py	(revision 72963)
++++ gui/wxpython/gui_core/widgets.py	(working copy)
+@@ -48,6 +48,7 @@
+ import sys
+ import string
+ import re
++import six
+ from bisect import bisect
+ from datetime import datetime
+ from core.globalvar import wxPythonPhoenix
+@@ -1376,7 +1377,7 @@
+         try:
+             fd = open(self.settingsFile, 'w')
+             fd.write('format_version=2.0\n')
+-            for key, values in self._settings.iteritems():
++            for key, values in six.iteritems(self._settings):
+                 first = True
+                 for v in values:
+                     # escaping characters
+Index: gui/wxpython/iclass/frame.py
+===================================================================
+--- gui/wxpython/iclass/frame.py	(revision 72963)
++++ gui/wxpython/iclass/frame.py	(working copy)
+@@ -19,6 +19,7 @@
+ 
+ import os
+ import sys
++import six
+ import copy
+ import tempfile
+ import types
+@@ -1462,7 +1463,7 @@
+ 
+     def GetAlias(self, name):
+         """Returns alias for layer"""
+-        name = [k for k, v in self.layerName.iteritems() if v == name]
++        name = [k for k, v in six.iteritems(self.layerName) if v == name]
+         if name:
+             return name[0]
+         return None
+Index: gui/wxpython/iclass/statistics.py
+===================================================================
+--- gui/wxpython/iclass/statistics.py	(revision 72963)
++++ gui/wxpython/iclass/statistics.py	(working copy)
+@@ -18,6 +18,7 @@
+ """
+ 
+ import os
++import six
+ from ctypes import *
+ 
+ import grass.script as grass
+@@ -176,7 +177,7 @@
+ 
+     def SetStatistics(self, stats):
+ 
+-        for st, val in stats.iteritems():
++        for st, val in six.iteritems(stats):
+             setattr(self, st, val)
+ 
+         self.statisticsSet.emit(stats=stats)
 Index: gui/wxpython/icons/icon.py
 ===================================================================
---- gui/wxpython/icons/icon.py	(revision 72951)
+--- gui/wxpython/icons/icon.py	(revision 72963)
 +++ gui/wxpython/icons/icon.py	(working copy)
-@@ -25,9 +25,10 @@
+@@ -18,6 +18,7 @@
+ import os
+ import sys
+ import copy
++import six
+ 
+ import wx
+ 
+@@ -25,9 +26,10 @@
  from core.utils import _
  
  # default icon set
@@ -110,9 +922,447 @@ Index: gui/wxpython/icons/icon.py
  
  iconTheme = UserSettings.Get(
      group='appearance',
+@@ -46,7 +48,7 @@
+     if iconPath and not os.path.exists(iconPath):
+         raise OSError
+ 
+-    for key, img in iconSet.iteritems():
++    for key, img in six.iteritems(iconSet):
+         if key not in iconSet or \
+                 iconSet[key] is None:  # add key
+             iconSet[key] = img
+Index: gui/wxpython/image2target/ii2t_manager.py
+===================================================================
+--- gui/wxpython/image2target/ii2t_manager.py	(revision 72963)
++++ gui/wxpython/image2target/ii2t_manager.py	(working copy)
+@@ -35,6 +35,7 @@
+ 
+ import os
+ import sys
++import six
+ import shutil
+ import time
+ from copy import copy
+@@ -1293,7 +1294,7 @@
+                    "ucolor": "unused"}
+         wpx = UserSettings.Get(group='gcpman', key='symbol', subkey='width')
+ 
+-        for k, v in colours.iteritems():
++        for k, v in six.iteritems(colours):
+             col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
+             self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
+                 col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+Index: gui/wxpython/iscatt/controllers.py
+===================================================================
+--- gui/wxpython/iscatt/controllers.py	(revision 72963)
++++ gui/wxpython/iscatt/controllers.py	(working copy)
+@@ -23,6 +23,7 @@
+ import sys
+ from copy import deepcopy
+ import wx
++import six
+ 
+ 
+ from core.gcmd import GException, GError, GMessage, RunCommand, GWarning
+@@ -366,7 +367,7 @@
+     def SetPlotsMode(self, mode):
+ 
+         self.plot_mode = mode
+-        for scatt in self.plots.itervalues():
++        for scatt in six.itervalues(self.plots):
+             if scatt['scatt']:
+                 scatt['scatt'].SetMode(mode)
+ 
+@@ -374,7 +375,7 @@
+ 
+     def ActivateSelectionPolygonMode(self, activate):
+         self.pol_sel_mode[0] = activate
+-        for scatt in self.plots.itervalues():
++        for scatt in six.itervalues(self.plots):
+             if not scatt['scatt']:
+                 continue
+             scatt['scatt'].SetSelectionPolygonMode(activate)
+@@ -387,7 +388,7 @@
+ 
+     def ProcessSelectionPolygons(self, process_mode):
+         scatts_polygons = {}
+-        for scatt_id, scatt in self.plots.iteritems():
++        for scatt_id, scatt in six.iteritems(self.plots):
+             if not scatt['scatt']:
+                 continue
+             coords = scatt['scatt'].GetCoords()
+@@ -419,7 +420,7 @@
+         if not sel_cat_id:
+             return
+ 
+-        for scatt in self.plots.itervalues():
++        for scatt in six.itervalues(self.plots):
+             if scatt['scatt']:
+                 scatt['scatt'].SetEmpty()
+ 
+@@ -544,7 +545,7 @@
+             else:
+                 ellipses_dt = {}
+ 
+-            for c in scatt_dt.iterkeys():
++            for c in six.iterkeys(scatt_dt):
+                 try:
+                     self.cat_ids.remove(c)
+                     scatt_dt[c]['render'] = True
+@@ -700,7 +701,7 @@
+         render = False
+         update_cat_rast = []
+ 
+-        for k, v in attrs_dict.iteritems():
++        for k, v in six.iteritems(attrs_dict):
+             if not render and k in ['color', 'opacity', 'show', 'nstd']:
+                 render = True
+             if k in ['color', 'name']:
+@@ -975,7 +976,7 @@
+ 
+     def RenderCatRast(self, cat_id):
+ 
+-        if not cat_id in self.added_cats_rasts.iterkeys():
++        if not cat_id in six.iterkeys(self.added_cats_rasts):
+             cat_rast = self.scatt_mgr.core.GetCatRast(cat_id)
+ 
+             cat_name = self.cats_mgr.GetCategoryAttrs(cat_id)['name']
+Index: gui/wxpython/iscatt/core_c.py
+===================================================================
+--- gui/wxpython/iscatt/core_c.py	(revision 72963)
++++ gui/wxpython/iscatt/core_c.py	(working copy)
+@@ -12,6 +12,7 @@
+ """
+ 
+ import sys
++import six
+ import numpy as np
+ from multiprocessing import Process, Queue
+ 
+@@ -107,13 +108,13 @@
+ 
+ def _memmapToFileNames(data):
+ 
+-    for k, v in data.iteritems():
++    for k, v in six.iteritems(data):
+         if 'np_vals' in v:
+             data[k]['np_vals'] = v['np_vals'].filename()
+ 
+ 
+ def _fileNamesToMemmap(data):
+-    for k, v in data.iteritems():
++    for k, v in six.iteritems(data):
+         if 'np_vals' in v:
+             data[k]['np_vals'] = np.memmap(filename=v['np_vals'])
+ 
+@@ -186,7 +187,7 @@
+                     'nsres': 'ns_res',
+                     'ewres': 'ew_res'}
+ 
+-    for k, v in region.iteritems():
++    for k, v in six.iteritems(region):
+         if k in ["rows", "cols", "cells", "zone"]:  # zone added in r65224
+             v = int(v)
+         else:
+@@ -221,11 +222,11 @@
+     refs = []
+     cats_rasts_core = []
+ 
+-    for cat_id, scatt_ids in cats.iteritems():
++    for cat_id, scatt_ids in six.iteritems(cats):
+         cat_c_id = I_sc_add_cat(pointer(sccats))
+         cats_rasts_core.append(cats_rasts[cat_id])
+ 
+-        for scatt_id, dt in scatt_ids.iteritems():
++        for scatt_id, dt in six.iteritems(scatt_ids):
+             # if key is missing condition is always True (full scatter plor is
+             # computed)
+             vals = dt['np_vals']
+Index: gui/wxpython/iscatt/dialogs.py
+===================================================================
+--- gui/wxpython/iscatt/dialogs.py	(revision 72963)
++++ gui/wxpython/iscatt/dialogs.py	(working copy)
+@@ -19,6 +19,7 @@
+ """
+ import os
+ import sys
++import six
+ 
+ import wx
+ from iscatt.iscatt_core import idBandsToidScatt
+@@ -360,7 +361,7 @@
+                 "selection", _("Color of selection polygon vertex:")], "sel_area": [
+                 "selection", _("Selected area color:")]}
+ 
+-        for settKey, sett in self.colorsSetts.iteritems():
++        for settKey, sett in six.iteritems(self.colorsSetts):
+             settsLabels[settKey] = wx.StaticText(
+                 parent=self, id=wx.ID_ANY, label=sett[1])
+             col = UserSettings.Get(group='scatt', key=sett[0], subkey=settKey)
+@@ -373,7 +374,7 @@
+             "sel_area_opacty": ["selection", _("Selected area opacity:")]
+         }
+ 
+-        for settKey, sett in self.sizeSetts.iteritems():
++        for settKey, sett in six.iteritems(self.sizeSetts):
+             settsLabels[settKey] = wx.StaticText(
+                 parent=self, id=wx.ID_ANY, label=sett[1])
+             self.settings[settKey] = SpinCtrl(
+@@ -480,7 +481,7 @@
+     def UpdateSettings(self):
+ 
+         chanaged_setts = []
+-        for settKey, sett in self.colorsSetts.iteritems():
++        for settKey, sett in six.iteritems(self.colorsSetts):
+             col = tuple(self.settings[settKey].GetColour())
+             col_s = UserSettings.Get(
+                 group='scatt', key=sett[0], subkey=settKey)
+@@ -491,7 +492,7 @@
+                                  value=col)
+                 chanaged_setts.append([settKey, sett[0]])
+ 
+-        for settKey, sett in self.sizeSetts.iteritems():
++        for settKey, sett in six.iteritems(self.sizeSetts):
+             val = self.settings[settKey].GetValue()
+             val_s = UserSettings.Get(
+                 group='scatt', key=sett[0], subkey=settKey)
+Index: gui/wxpython/iscatt/frame.py
+===================================================================
+--- gui/wxpython/iscatt/frame.py	(revision 72963)
++++ gui/wxpython/iscatt/frame.py	(working copy)
+@@ -22,6 +22,7 @@
+ 
+ import os
+ import sys
++import six
+ 
+ import wx
+ import wx.lib.scrolledpanel as scrolled
+@@ -260,7 +261,7 @@
+         self.scatt_mgr.cursorPlotMove.connect(self.CursorPlotMove)
+ 
+     def SetBusy(self, busy):
+-        for scatt in self.scatts.itervalues():
++        for scatt in six.itervalues(self.scatts):
+             scatt.UpdateCur(busy)
+ 
+     def CursorPlotMove(self, x, y, scatt_id):
+Index: gui/wxpython/iscatt/iscatt_core.py
+===================================================================
+--- gui/wxpython/iscatt/iscatt_core.py	(revision 72963)
++++ gui/wxpython/iscatt/iscatt_core.py	(working copy)
+@@ -19,6 +19,7 @@
+ """
+ import os
+ import sys
++import six
+ 
+ import time
+ 
+@@ -114,7 +115,7 @@
+ 
+         arr = self.scatt_conds_dt.GetValuesArr(cat_id, scatt_id)
+ 
+-        for k, v in bbox.iteritems():
++        for k, v in six.iteritems(bbox):
+             bbox[k] = self._validExtend(v)
+ 
+         arr[bbox['btm_y']: bbox['up_y'], bbox['btm_x']: bbox['up_x']] = value
+@@ -159,7 +160,7 @@
+         if cat_id not in self.scatts_dt.GetCategories():
+             raise GException(_("Select category for editing."))
+ 
+-        for scatt_id, coords in scatts_pols.iteritems():
++        for scatt_id, coords in six.iteritems(scatts_pols):
+ 
+             if self.scatt_conds_dt.AddScattPlot(cat_id, scatt_id) < 0:
+                 return False
+@@ -471,7 +472,7 @@
+         if cat_id not in self.cats.keys():
+             return False
+ 
+-        for scatt in self.cats[cat_id].itervalues():
++        for scatt in six.itervalues(self.cats[cat_id]):
+             grass.try_remove(scatt['np_vals'])
+             del scatt['np_vals']
+ 
+@@ -552,7 +553,7 @@
+     def GetData(self, requested_dt):
+ 
+         cats = {}
+-        for cat_id, scatt_ids in requested_dt.iteritems():
++        for cat_id, scatt_ids in six.iteritems(requested_dt):
+             if cat_id not in cats:
+                 cats[cat_id] = {}
+             for scatt_id in scatt_ids:
+@@ -567,7 +568,7 @@
+ 
+     def SetData(self, cats):
+ 
+-        for cat_id, scatt_ids in cats.iteritems():
++        for cat_id, scatt_ids in six.iteritems(cats):
+             for scatt_id in scatt_ids:
+                 # if key is missing condition is always True (full scatter plor
+                 # is computed)
+@@ -577,7 +578,7 @@
+ 
+     def GetScatt(self, scatt_id, cats_ids=None):
+         scatts = {}
+-        for cat_id in self.cats.iterkeys():
++        for cat_id in six.iterkeys(self.cats):
+             if cats_ids and cat_id not in cats_ids:
+                 continue
+             if scatt_id not in self.cats[cat_id]:
+@@ -644,7 +645,7 @@
+             return False
+ 
+         self.scatts_ids.append(scatt_id)
+-        for cat_id in self.cats.iterkeys():
++        for cat_id in six.iterkeys(self.cats):
+             ScattPlotsCondsData.AddScattPlot(self, cat_id, scatt_id)
+             self.cats[cat_id][scatt_id]['ellipse'] = None
+ 
+@@ -657,7 +658,7 @@
+ 
+         self.scatts_ids.remove(scatt_id)
+ 
+-        for cat_id in self.cats.iterkeys():
++        for cat_id in six.iterkeys(self.cats):
+             ScattPlotsCondsData.DeleteScattPlot(self, cat_id, scatt_id)
+ 
+         return True
+@@ -667,7 +668,7 @@
+             return False
+ 
+         scatts = {}
+-        for cat_id in self.cats.iterkeys():
++        for cat_id in six.iterkeys(self.cats):
+             if cat_id == 0:
+                 continue
+             nstd = styles[cat_id]['nstd']
+@@ -740,9 +741,9 @@
+     def CleanUp(self):
+ 
+         ScattPlotsCondsData.CleanUp(self)
+-        for tmp in self.cats_rasts_conds.itervalues():
++        for tmp in six.itervalues(self.cats_rasts_conds):
+             grass.try_remove(tmp)
+-        for tmp in self.cats_rasts.itervalues():
++        for tmp in six.itervalues(self.cats_rasts):
+             RunCommand("g.remove", flags='f',
+                        type='raster', name=tmp,
+                        getErrorMsg=True)
+@@ -762,7 +763,7 @@
+         max_cat_id = max(self.cats_rasts_conds.keys())
+ 
+         cats_rasts_conds = [''] * (max_cat_id + 1)
+-        for i_cat_id, i_rast in self.cats_rasts_conds.iteritems():
++        for i_cat_id, i_rast in six.iteritems(self.cats_rasts_conds):
+             cats_rasts_conds[i_cat_id] = i_rast
+ 
+         return cats_rasts_conds
+@@ -771,7 +772,7 @@
+         max_cat_id = max(self.cats_rasts.keys())
+ 
+         cats_rasts = [''] * (max_cat_id + 1)
+-        for i_cat_id, i_rast in self.cats_rasts.iteritems():
++        for i_cat_id, i_rast in six.iteritems(self.cats_rasts):
+             cats_rasts[i_cat_id] = i_rast
+ 
+         return cats_rasts
+Index: gui/wxpython/iscatt/plots.py
+===================================================================
+--- gui/wxpython/iscatt/plots.py	(revision 72963)
++++ gui/wxpython/iscatt/plots.py	(working copy)
+@@ -16,6 +16,7 @@
+ @author Stepan Turek <stepan.turek seznam.cz> (mentor: Martin Landa)
+ """
+ import wx
++import six
+ import numpy as np
+ from math import ceil
+ from multiprocessing import Process, Queue
+@@ -550,7 +551,7 @@
+ 
+ def _rendDtMemmapsToFiles(rend_dt):
+ 
+-    for k, v in rend_dt.iteritems():
++    for k, v in six.iteritems(rend_dt):
+         if 'dt' in v:
+             rend_dt[k]['sh'] = v['dt'].shape
+             rend_dt[k]['dt'] = v['dt'].filename
+@@ -558,7 +559,7 @@
+ 
+ def _rendDtFilesToMemmaps(rend_dt):
+ 
+-    for k, v in rend_dt.iteritems():
++    for k, v in six.iteritems(rend_dt):
+         if 'dt' in v:
+             rend_dt[k]['dt'] = np.memmap(filename=v['dt'], shape=v['sh'])
+             del rend_dt[k]['sh']
+Index: gui/wxpython/location_wizard/wizard.py
+===================================================================
+--- gui/wxpython/location_wizard/wizard.py	(revision 72963)
++++ gui/wxpython/location_wizard/wizard.py	(working copy)
+@@ -35,6 +35,7 @@
+ import os
+ import sys
+ import locale
++import six
+ 
+ import wx
+ import wx.lib.mixins.listctrl as listmix
+@@ -849,7 +850,7 @@
+         """Go to next page"""
+         if event.GetDirection():
+             self.p4projparams = ''
+-            for id, param in self.pparam.iteritems():
++            for id, param in six.iteritems(self.pparam):
+                 if param['type'] == 'bool':
+                     if param['value'] == False:
+                         continue
+@@ -1699,7 +1700,7 @@
+             return
+ 
+         data = list()
+-        for code, val in self.epsgCodeDict.iteritems():
++        for code, val in six.iteritems(self.epsgCodeDict):
+             if code is not None:
+                 data.append((code, val[0], val[1]))
+ 
+@@ -1946,7 +1947,7 @@
+             return
+ 
+         data = list()
+-        for code, val in self.epsgCodeDict.iteritems():
++        for code, val in six.iteritems(self.epsgCodeDict):
+             if code is not None:
+                 data.append((code, val[0], val[1]))
+ 
+Index: gui/wxpython/mapdisp/main.py
+===================================================================
+--- gui/wxpython/mapdisp/main.py	(revision 72963)
++++ gui/wxpython/mapdisp/main.py	(working copy)
+@@ -30,6 +30,7 @@
+ 
+ import os
+ import sys
++import six
+ import time
+ import shutil
+ import fileinput
+@@ -562,7 +563,7 @@
+             # stop the timer
+             # self.timer.Stop()
+             # terminate thread
+-            for f in monFile.itervalues():
++            for f in six.itervalues(monFile):
+                 try_remove(f)
+ 
+     def watcher(self):
 Index: gui/wxpython/mapdisp/test_mapdisp.py
 ===================================================================
---- gui/wxpython/mapdisp/test_mapdisp.py	(revision 72951)
+--- gui/wxpython/mapdisp/test_mapdisp.py	(revision 72963)
 +++ gui/wxpython/mapdisp/test_mapdisp.py	(working copy)
 @@ -1,4 +1,4 @@
 -#!/usr/bin/env python
@@ -120,9 +1370,393 @@ Index: gui/wxpython/mapdisp/test_mapdisp.py
  
  ############################################################################
  #
+Index: gui/wxpython/mapwin/base.py
+===================================================================
+--- gui/wxpython/mapwin/base.py	(revision 72963)
++++ gui/wxpython/mapwin/base.py	(working copy)
+@@ -20,6 +20,7 @@
+ """
+ 
+ import wx
++import six
+ 
+ from core.settings import UserSettings
+ from core.gcmd import GError
+@@ -185,7 +186,7 @@
+         """Binds helper functions, which calls all handlers
+            registered to events with the events
+         """
+-        for ev, handlers in self.handlersContainer.iteritems():
++        for ev, handlers in six.iteritems(self.handlersContainer):
+             self.Bind(ev, self.EventTypeHandler(handlers))
+ 
+     def EventTypeHandler(self, evHandlers):
+@@ -255,7 +256,7 @@
+         """
+         self.mouseHandlerRegistered.emit()
+         # inserts handler into list
+-        for containerEv, handlers in self.handlersContainer.iteritems():
++        for containerEv, handlers in six.iteritems(self.handlersContainer):
+             if event == containerEv:
+                 handlers.append(handler)
+ 
+@@ -276,7 +277,7 @@
+         Before each handler is unregistered it is called with string
+         value "unregistered" of event parameter.
+         """
+-        for containerEv, handlers in self.handlersContainer.iteritems():
++        for containerEv, handlers in six.iteritems(self.handlersContainer):
+             for handler in handlers:
+                 try:
+                     handler("unregistered")
+@@ -304,7 +305,7 @@
+         :return: False if event cannot be unbind
+         """
+         # removes handler from list
+-        for containerEv, handlers in self.handlersContainer.iteritems():
++        for containerEv, handlers in six.iteritems(self.handlersContainer):
+             if event != containerEv:
+                 continue
+             try:
+Index: gui/wxpython/modules/colorrules.py
+===================================================================
+--- gui/wxpython/modules/colorrules.py	(revision 72963)
++++ gui/wxpython/modules/colorrules.py	(working copy)
+@@ -26,6 +26,7 @@
+ import shutil
+ import copy
+ import tempfile
++import six
+ 
+ import wx
+ import wx.lib.colourselect as csel
+@@ -682,7 +683,7 @@
+                 return
+ 
+         rulestxt = ''
+-        for rule in self.rulesPanel.ruleslines.itervalues():
++        for rule in six.itervalues(self.rulesPanel.ruleslines):
+             if 'value' not in rule:
+                 continue
+             rulestxt += rule['value'] + ' ' + rule['color'] + '\n'
+@@ -793,7 +794,7 @@
+         """
+         rulestxt = ''
+ 
+-        for rule in self.rulesPanel.ruleslines.itervalues():
++        for rule in six.itervalues(self.rulesPanel.ruleslines):
+             if 'value' not in rule:  # skip empty rules
+                 continue
+ 
+@@ -1808,7 +1809,7 @@
+         """
+         rulestxt = ''
+ 
+-        for rule in self.rulesPanel.ruleslines.itervalues():
++        for rule in six.itervalues(self.rulesPanel.ruleslines):
+             if 'value' not in rule:  # skip empty rules
+                 break
+ 
+Index: gui/wxpython/nviz/mapwindow.py
+===================================================================
+--- gui/wxpython/nviz/mapwindow.py	(revision 72963)
++++ gui/wxpython/nviz/mapwindow.py	(working copy)
+@@ -20,6 +20,7 @@
+ 
+ import os
+ import sys
++import six
+ import time
+ import copy
+ import math
+@@ -483,7 +484,7 @@
+             and then to textures so that they can be rendered by OpenGL.
+             Updates self.imagelist"""
+         # update images (legend and text)
+-        for oid, overlay in self.overlays.iteritems():
++        for oid, overlay in six.iteritems(self.overlays):
+             if not overlay.IsShown() or overlay.name in ('barscale', 'northarrow'):
+                 continue
+             if oid not in [t.GetId() for t in self.imagelist]:  # new
+Index: gui/wxpython/nviz/tools.py
+===================================================================
+--- gui/wxpython/nviz/tools.py	(revision 72963)
++++ gui/wxpython/nviz/tools.py	(working copy)
+@@ -23,6 +23,7 @@
+ import sys
+ import copy
+ import types
++import six
+ 
+ import wx
+ import wx.lib.colourselect as csel
+@@ -2727,7 +2728,7 @@
+             return
+         name = _("constant#") + str(layerIdx + 1)
+         data = self.mapWindow.constants[layerIdx]
+-        for attr, value in data['constant'].iteritems():
++        for attr, value in six.iteritems(data['constant']):
+             if attr == 'color':
+                 value = self._getColorFromString(value)
+             if attr in ('color', 'value', 'resolution', 'transp'):
+@@ -2781,7 +2782,7 @@
+         if not winName:
+             return
+         data[winName] = self.FindWindowById(event.GetId()).GetValue()
+-        for w in win[winName].itervalues():
++        for w in six.itervalues(win[winName]):
+             self.FindWindowById(w).SetValue(data[winName])
+ 
+         event.Skip()
+@@ -3123,9 +3124,9 @@
+         sizer.Add(w, pos=(1, 0), flag=wx.ALIGN_CENTER)
+ 
+     def __GetWindowName(self, data, id):
+-        for name in data.iterkeys():
++        for name in six.iterkeys(data):
+             if isinstance(data[name], type({})):
+-                for win in data[name].itervalues():
++                for win in six.itervalues(data[name]):
+                     if win == id:
+                         return name
+             else:
+@@ -3141,7 +3142,7 @@
+                         'persp',
+                         'twist',
+                         'z-exag'):
+-            for win in self.win['view'][control].itervalues():
++            for win in six.itervalues(self.win['view'][control]):
+                 try:
+                     if control == 'height':
+                         value = int(self.mapWindow.iview[control]['value'])
+@@ -3182,7 +3183,7 @@
+         value = self.FindWindowById(event.GetId()).GetValue()
+ 
+         self.mapWindow.light['position']['z'] = value
+-        for win in self.win['light'][winName].itervalues():
++        for win in six.itervalues(self.win['light'][winName]):
+             self.FindWindowById(win).SetValue(value)
+ 
+         self.PostLightEvent()
+@@ -3305,7 +3306,7 @@
+ 
+         view[winName]['value'] = convert(value)
+ 
+-        for win in self.win['view'][winName].itervalues():
++        for win in six.itervalues(self.win['view'][winName]):
+             self.FindWindowById(win).SetValue(value)
+ 
+         self.mapWindow.iview['dir']['use'] = False
+@@ -3367,7 +3368,7 @@
+     def OnResetSurfacePosition(self, event):
+         """Reset position of surface"""
+ 
+-        for win in self.win['surface']['position'].itervalues():
++        for win in six.itervalues(self.win['surface']['position']):
+             if win == self.win['surface']['position']['axis']:
+                 self.FindWindowById(win).SetSelection(2)  # Z
+             elif win == self.win['surface']['position']['reset']:
+@@ -3499,13 +3500,13 @@
+ 
+     def EnablePage(self, name, enabled=True):
+         """Enable/disable all widgets on page"""
+-        for key, item in self.win[name].iteritems():
++        for key, item in six.iteritems(self.win[name]):
+             if key in ('map', 'surface', 'new', 'planes'):
+                 continue
+             if isinstance(item, types.DictType):
+-                for skey, sitem in self.win[name][key].iteritems():
++                for skey, sitem in six.iteritems(self.win[name][key]):
+                     if isinstance(sitem, types.DictType):
+-                        for ssitem in self.win[name][key][skey].itervalues():
++                        for ssitem in six.itervalues(self.win[name][key][skey]):
+                             if not isinstance(ssitem, types.BooleanType) and \
+                                isinstance(ssitem, types.IntType):
+                                 self.FindWindowById(ssitem).Enable(enabled)
+@@ -3818,7 +3819,7 @@
+         slider = self.FindWindowById(self.win['surface'][winName]['slider'])
+         self.AdjustSliderRange(slider=slider, value=value)
+ 
+-        for win in self.win['surface']['position'].itervalues():
++        for win in six.itervalues(self.win['surface']['position']):
+             if win in (self.win['surface']['position']['axis'],
+                        self.win['surface']['position']['reset']):
+                 continue
+@@ -4047,7 +4048,7 @@
+             self.win['vector'][vtype]['height']['slider'])
+         self.AdjustSliderRange(slider=slider, value=value)
+ 
+-        for win in self.win['vector'][vtype]['height'].itervalues():
++        for win in six.itervalues(self.win['vector'][vtype]['height']):
+             self.FindWindowById(win).SetValue(value)
+ 
+         data = self.GetLayerData('vector')
+@@ -4683,7 +4684,7 @@
+         slider = self.FindWindowById(self.win['volume'][winName]['slider'])
+         self.AdjustSliderRange(slider=slider, value=value)
+ 
+-        for win in self.win['volume']['position'].itervalues():
++        for win in six.itervalues(self.win['volume']['position']):
+             if win in (self.win['volume']['position']['axis'],
+                        self.win['volume']['position']['reset']):
+                 continue
+@@ -4748,7 +4749,7 @@
+ 
+     def OnResetVolumePosition(self, event):
+         """Reset position of volume"""
+-        for win in self.win['volume']['position'].itervalues():
++        for win in six.itervalues(self.win['volume']['position']):
+             if win == self.win['volume']['position']['axis']:
+                 self.FindWindowById(win).SetSelection(2)  # Z
+             elif win == self.win['volume']['position']['reset']:
+@@ -5315,7 +5316,7 @@
+         #
+         # draw
+         #
+-        for control, drawData in data['draw'].iteritems():
++        for control, drawData in six.iteritems(data['draw']):
+             if control == 'all':  # skip 'all' property
+                 continue
+             if control == 'resolution':
+@@ -5516,7 +5517,7 @@
+             self.FindWindowById(self.win['volume']['map']).SetValue(layer.name)
+ 
+         # draw
+-        for control, idata in data['draw'].iteritems():
++        for control, idata in six.iteritems(data['draw']):
+             if control == 'all':  # skip 'all' property
+                 continue
+ 
+Index: gui/wxpython/nviz/workspace.py
+===================================================================
+--- gui/wxpython/nviz/workspace.py	(revision 72963)
++++ gui/wxpython/nviz/workspace.py	(working copy)
+@@ -15,6 +15,7 @@
+ """
+ 
+ import copy
++import six
+ 
+ from core.settings import UserSettings
+ from core.utils import _
+@@ -33,8 +34,8 @@
+     def SetConstantDefaultProp(self):
+         """Set default constant data properties"""
+         data = dict()
+-        for key, value in UserSettings.Get(
+-                group='nviz', key='constant').iteritems():
++        for key, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                         key='constant')):
+             data[key] = value
+         color = str(data['color'][0]) + ':' + str(data['color']
+                                                   [1]) + ':' + str(data['color'][2])
+@@ -54,8 +55,9 @@
+         #
+         for attrb in ('shine', ):
+             data['attribute'][attrb] = {}
+-            for key, value in UserSettings.Get(group='nviz', key='surface',
+-                                               subkey=attrb).iteritems():
++            for key, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                             key='surface',
++                                                             subkey=attrb)):
+                 data['attribute'][attrb][key] = value
+             data['attribute'][attrb]['update'] = None
+ 
+@@ -63,8 +65,9 @@
+         # draw
+         #
+         data['draw']['all'] = False  # apply only for current surface
+-        for control, value in UserSettings.Get(group='nviz', key='surface',
+-                                               subkey='draw').iteritems():
++        for control, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                             key='surface',
++                                                             subkey='draw')):
+             if control[:3] == 'res':
+                 if 'resolution' not in data['draw']:
+                     data['draw']['resolution'] = {}
+@@ -115,8 +118,9 @@
+         #
+         # draw
+         #
+-        for control, value in UserSettings.Get(
+-                group='nviz', key='volume', subkey='draw').iteritems():
++        for control, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                             key='volume',
++                                                             subkey='draw')):
+             if control == 'shading':
+                 sel = UserSettings.Get(
+                     group='nviz', key='volume', subkey=[
+@@ -157,8 +161,9 @@
+         #
+         for attrb in ('shine', ):
+             data['attribute'][attrb] = {}
+-            for key, value in UserSettings.Get(group='nviz', key='volume',
+-                                               subkey=attrb).iteritems():
++            for key, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                             key='volume',
++                                                             subkey=attrb)):
+                 data['attribute'][attrb][key] = value
+ 
+         return data
+@@ -172,8 +177,9 @@
+             if attr == 'inout':
+                 data[attr]['value'] = 0
+                 continue
+-            for key, value in UserSettings.Get(group='nviz', key='volume',
+-                                               subkey=attr).iteritems():
++            for key, value in six.iteritems(UserSettings.Get(group='nviz',
++                                                             key='volume',
++                                                             subkey=attr)):
+                 data[attr][key] = value
+         return data
+ 
+Index: gui/wxpython/photo2image/ip2i_manager.py
+===================================================================
+--- gui/wxpython/photo2image/ip2i_manager.py	(revision 72963)
++++ gui/wxpython/photo2image/ip2i_manager.py	(working copy)
+@@ -28,6 +28,7 @@
+ 
+ import os
+ import sys
++import six
+ import shutil
+ import time
+ from copy import copy
+@@ -685,7 +686,7 @@
+                    "ucolor": "unused"}
+         wpx = UserSettings.Get(group='gcpman', key='symbol', subkey='width')
+ 
+-        for k, v in colours.iteritems():
++        for k, v in six.iteritems(colours):
+             col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
+             self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
+                 col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+Index: gui/wxpython/psmap/instructions.py
+===================================================================
+--- gui/wxpython/psmap/instructions.py	(revision 72963)
++++ gui/wxpython/psmap/instructions.py	(working copy)
+@@ -34,6 +34,7 @@
+ 
+ import os
+ import string
++import six
+ from math import ceil
+ from time import strftime, localtime
+ 
+@@ -762,8 +763,8 @@
+                         # e.g. paper a3
+                         try:
+                             instr['Format'] = pformat
+-                            for key, value in availableFormats[
+-                                    pformat].iteritems():
++                            for key, value in six.iteritems(availableFormats[
++                                                            pformat]):
+                                 instr[key] = float(value)
+                             break
+                         except KeyError:
 Index: gui/wxpython/rlisetup/sampling_frame.py
 ===================================================================
---- gui/wxpython/rlisetup/sampling_frame.py	(revision 72951)
+--- gui/wxpython/rlisetup/sampling_frame.py	(revision 72963)
 +++ gui/wxpython/rlisetup/sampling_frame.py	(working copy)
 @@ -47,7 +47,7 @@
  from grass.pydispatch.signal import Signal
@@ -133,3 +1767,724 @@ Index: gui/wxpython/rlisetup/sampling_frame.py
  
  
  class Circle:
+Index: gui/wxpython/timeline/frame.py
+===================================================================
+--- gui/wxpython/timeline/frame.py	(revision 72963)
++++ gui/wxpython/timeline/frame.py	(working copy)
+@@ -17,6 +17,7 @@
+ """
+ import os
+ import signal
++import six
+ from math import ceil
+ from itertools import cycle
+ import numpy as np
+@@ -442,8 +443,8 @@
+         tDict = tgis.tlist_grouped('stds', group_type=True, dbif=self.dbif)
+         # nested list with '(map, mapset, etype)' items
+         allDatasets = [[[(map, mapset, etype) for map in maps]
+-                        for etype, maps in etypesDict.iteritems()]
+-                       for mapset, etypesDict in tDict.iteritems()]
++                        for etype, maps in six.iteritems(etypesDict)]
++                       for mapset, etypesDict in six.iteritems(tDict)]
+         # flatten this list
+         if allDatasets:
+             allDatasets = reduce(
+Index: gui/wxpython/tplot/frame.py
+===================================================================
+--- gui/wxpython/tplot/frame.py	(revision 72963)
++++ gui/wxpython/tplot/frame.py	(working copy)
+@@ -19,6 +19,7 @@
+ @author start stvds support Matej Krejci
+ """
+ import os
++import six
+ from itertools import cycle
+ import numpy as np
+ 
+@@ -669,7 +670,7 @@
+             self.yticksPos.append(1)  # TODO
+             xdata = []
+             ydata = []
+-            for keys, values in self.timeDataR[name].iteritems():
++            for keys, values in six.iteritems(self.timeDataR[name]):
+                 if keys in ['temporalType', 'granularity', 'validTopology',
+                             'unit', 'temporalDataType']:
+                     continue
+@@ -710,9 +711,8 @@
+             xdata = []
+             ydata = []
+             xcsv = []
+-            for keys, values in self.timeDataV[
+-                    name_cat[0]][
+-                    name_cat[1]].iteritems():
++            for keys, values in six.iteritems(self.timeDataV[name_cat[0]]
++                                                            [name_cat[1]]):
+                 if keys in ['temporalType', 'granularity', 'validTopology',
+                             'unit', 'temporalDataType']:
+                     continue
+@@ -762,7 +762,7 @@
+             xdata = []
+             ydata = []
+             xcsv = []
+-            for keys, values in self.timeDataV[name].iteritems():
++            for keys, values in six.iteritems(self.timeDataV[name]):
+                 if keys in ['temporalType', 'granularity', 'validTopology',
+                             'unit', 'temporalDataType']:
+                     continue
+@@ -910,8 +910,8 @@
+         tDict = tgis.tlist_grouped(type=typ, group_type=True, dbif=self.dbif)
+         # nested list with '(map, mapset, etype)' items
+         allDatasets = [[[(map, mapset, etype) for map in maps]
+-                        for etype, maps in etypesDict.iteritems()]
+-                       for mapset, etypesDict in tDict.iteritems()]
++                        for etype, maps in six.iteritems(etypesDict)]
++                       for mapset, etypesDict in six.iteritems(tDict)]
+         # flatten this list
+         if allDatasets:
+             allDatasets = reduce(lambda x, y: x + y, reduce(lambda x, y: x + y,
+@@ -1069,7 +1069,7 @@
+ 
+     def GetInformation(self, x):
+         values = {}
+-        for key, value in self.data.iteritems():
++        for key, value in six.iteritems(self.data):
+             if value[x]:
+                 values[key] = [self.convert(x), value[x]]
+ 
+@@ -1082,7 +1082,7 @@
+ def InfoFormat(timeData, values):
+     """Formats information about dataset"""
+     text = []
+-    for key, val in values.iteritems():
++    for key, val in six.iteritems(values):
+         etype = timeData[key]['temporalDataType']
+         if etype == 'strds':
+             text.append(_("Space time raster dataset: %s") % key)
+Index: gui/wxpython/vdigit/dialogs.py
+===================================================================
+--- gui/wxpython/vdigit/dialogs.py	(revision 72963)
++++ gui/wxpython/vdigit/dialogs.py	(working copy)
+@@ -20,6 +20,7 @@
+ 
+ import sys
+ import copy
++import six
+ 
+ import wx
+ import wx.lib.mixins.listctrl as listmix
+@@ -413,7 +414,7 @@
+         newfid = -1
+ 
+         # add/delete new category
+-        for action, catsCurr in check.iteritems():
++        for action, catsCurr in six.iteritems(check):
+             for layer in catsCurr[0].keys():
+                 catList = []
+                 for cat in catsCurr[0][layer]:
+Index: gui/wxpython/vdigit/mapwindow.py
+===================================================================
+--- gui/wxpython/vdigit/mapwindow.py	(revision 72963)
++++ gui/wxpython/vdigit/mapwindow.py	(working copy)
+@@ -16,6 +16,7 @@
+ 
+ import wx
+ import tempfile
++import six
+ 
+ from grass.pydispatch.signal import Signal
+ 
+@@ -277,9 +278,9 @@
+         dbInfo = gselect.VectorDBInfo(vectorName)
+         sqlfile = tempfile.NamedTemporaryFile(mode="w")
+         for fid in fids:
+-            for layer, cats in self.digit.GetLineCats(fid).iteritems():
++            for layer, cats in six.iteritems(self.digit.GetLineCats(fid)):
+                 table = dbInfo.GetTable(layer)
+-                for attrb, item in vdigit['geomAttr'].iteritems():
++                for attrb, item in six.iteritems(vdigit['geomAttr']):
+                     val = -1
+                     if attrb == 'length':
+                         val = self.digit.GetLineLength(fid)
+Index: gui/wxpython/vdigit/preferences.py
+===================================================================
+--- gui/wxpython/vdigit/preferences.py	(revision 72963)
++++ gui/wxpython/vdigit/preferences.py	(working copy)
+@@ -15,6 +15,7 @@
+ """
+ 
+ import textwrap
++import six
+ 
+ import wx
+ import wx.lib.colourselect as csel
+@@ -817,7 +818,7 @@
+         checked = event.IsChecked()
+         id = event.GetId()
+         key = None
+-        for attrb, val in self.geomAttrb.iteritems():
++        for attrb, val in six.iteritems(self.geomAttrb):
+             if val['check'] == id:
+                 key = attrb
+                 break
+@@ -985,7 +986,7 @@
+         if self.parent.GetLayerManager():
+             self.parent.GetLayerManager().WorkspaceChanged()  # geometry attributes
+         # symbology
+-        for key, (enabled, color) in self.symbology.iteritems():
++        for key, (enabled, color) in six.iteritems(self.symbology):
+             if enabled:
+                 UserSettings.Set(group='vdigit', key='symbol',
+                                  subkey=[key, 'enabled'],
+@@ -1033,7 +1034,7 @@
+             item = tree.FindItemByData('maplayer', mapLayer)
+         else:
+             item = None
+-        for key, val in self.geomAttrb.iteritems():
++        for key, val in six.iteritems(self.geomAttrb):
+             checked = self.FindWindowById(val['check']).IsChecked()
+             column = self.FindWindowById(val['column']).GetValue()
+             unitsIdx = self.FindWindowById(val['units']).GetSelection()
+Index: gui/wxpython/vdigit/wxdigit.py
+===================================================================
+--- gui/wxpython/vdigit/wxdigit.py	(revision 72963)
++++ gui/wxpython/vdigit/wxdigit.py	(working copy)
+@@ -28,6 +28,7 @@
+ 
+ from __future__ import print_function
+ 
++import six
+ import grass.script.core as grass
+ 
+ from grass.pydispatch.signal import Signal
+@@ -1774,7 +1775,7 @@
+                 self.cats[field])
+ 
+         # set default values
+-        for field, cat in self.cats.iteritems():
++        for field, cat in six.iteritems(self.cats):
+             if cat is None:
+                 self.cats[field] = 0  # first category 1
+             Debug.msg(
+Index: gui/wxpython/vdigit/wxdisplay.py
+===================================================================
+--- gui/wxpython/vdigit/wxdisplay.py	(revision 72963)
++++ gui/wxpython/vdigit/wxdisplay.py	(working copy)
+@@ -20,6 +20,7 @@
+ from __future__ import print_function
+ 
+ import locale
++import six
+ 
+ import wx
+ 
+@@ -1176,7 +1177,7 @@
+             catsDict[layer].append(cats.cat[i])
+ 
+         catsStr = ''
+-        for l, c in catsDict.iteritems():
++        for l, c in six.iteritems(catsDict):
+             catsStr = '%d: (%s)' % (l, ','.join(map(str, c)))
+ 
+         return catsStr
+Index: gui/wxpython/vnet/dialogs.py
+===================================================================
+--- gui/wxpython/vnet/dialogs.py	(revision 72963)
++++ gui/wxpython/vnet/dialogs.py	(working copy)
+@@ -27,6 +27,7 @@
+ import os
+ import sys
+ import types
++import six
+ 
+ from copy import copy
+ from grass.script import core as grass
+@@ -797,7 +798,7 @@
+ 
+     def _setInputData(self):
+         params = {}
+-        for k, v in self.inputData.iteritems():
++        for k, v in six.iteritems(self.inputData):
+             params[k] = v.GetValue()
+         flags = {}
+         self.vnet_mgr.SetParams(params, flags)
+@@ -974,7 +975,7 @@
+         used_cols = []
+         attrCols = an_props["cmdParams"]["cols"]
+ 
+-        for col in attrCols.iterkeys():
++        for col in six.iterkeys(attrCols):
+ 
+             if "inputField" in attrCols[col]:
+                 colInptF = attrCols[col]["inputField"]
+@@ -1154,7 +1155,7 @@
+     def SetData(self, key, data):
+ 
+         idx = self._findIndex(key)
+-        for k, v in data.iteritems():
++        for k, v in six.iteritems(data):
+             if k == "use":
+ 
+                 if v and not self.IsChecked(idx):
+@@ -1267,7 +1268,7 @@
+                 "point_colors",
+                 _("Color for selected point:")]}
+ 
+-        for settKey, sett in self.colorsSetts.iteritems():
++        for settKey, sett in six.iteritems(self.colorsSetts):
+             settsLabels[settKey] = wx.StaticText(
+                 parent=self, id=wx.ID_ANY, label=sett[1])
+             col = UserSettings.Get(group='vnet', key=sett[0], subkey=settKey)
+@@ -1283,7 +1284,7 @@
+             "max_hist_steps": ["other", _("Maximum number of results in history:")]
+         }
+ 
+-        for settKey, sett in self.sizeSetts.iteritems():
++        for settKey, sett in six.iteritems(self.sizeSetts):
+             settsLabels[settKey] = wx.StaticText(
+                 parent=self, id=wx.ID_ANY, label=sett[1])
+             self.settings[settKey] = SpinCtrl(
+@@ -1443,7 +1444,7 @@
+         UserSettings.Set(group='vnet', key="res_style", subkey='line_width',
+                          value=self.settings["line_width"].GetValue())
+ 
+-        for settKey, sett in self.colorsSetts.iteritems():
++        for settKey, sett in six.iteritems(self.colorsSetts):
+             col = tuple(self.settings[settKey].GetColour())
+             UserSettings.Set(group='vnet',
+                              key=sett[0],
+@@ -1450,7 +1451,7 @@
+                              subkey=settKey,
+                              value=col)
+ 
+-        for settKey, sett in self.sizeSetts.iteritems():
++        for settKey, sett in six.iteritems(self.sizeSetts):
+             UserSettings.Set(group='vnet', key=sett[0], subkey=settKey,
+                              value=self.settings[settKey].GetValue())
+ 
+@@ -1537,7 +1538,7 @@
+             bsizer.Add(selPanels[sel], proportion=0,
+                        flag=wx.EXPAND)
+ 
+-        for k, v in init_data.iteritems():
++        for k, v in six.iteritems(init_data):
+             if k in self.inputData:
+                 self.inputData[k].SetValue(v)
+ 
+@@ -1615,7 +1616,7 @@
+     def GetData(self):
+ 
+         params = {}
+-        for param, sel in self.inputData.iteritems():
++        for param, sel in six.iteritems(self.inputData):
+             params[param] = sel.GetValue()
+ 
+         return params
+Index: gui/wxpython/vnet/vnet_core.py
+===================================================================
+--- gui/wxpython/vnet/vnet_core.py	(revision 72963)
++++ gui/wxpython/vnet/vnet_core.py	(working copy)
+@@ -20,6 +20,7 @@
+ """
+ 
+ import os
++import six
+ from grass.script.utils import try_remove
+ from grass.script import core as grass
+ from grass.script.task import cmdlist_to_tuple
+@@ -509,7 +510,7 @@
+         cmdParams.append("output=" + output)
+ 
+         cats = {}
+-        for cat_name, pts_coor in catPts.iteritems():
++        for cat_name, pts_coor in six.iteritems(catPts):
+ 
+             for coor in pts_coor:
+                 cat_num = str(
+@@ -527,7 +528,7 @@
+                 else:
+                     cats[cat_name] = [cat_num]
+ 
+-        for cat_name, cat_nums in cats.iteritems():
++        for cat_name, cat_nums in six.iteritems(cats):
+             cmdParams.append(cat_name + "=" + ",".join(cat_nums))
+ 
+         self.tmpTurnAn = AddTmpMapAnalysisMsg(
+@@ -679,7 +680,7 @@
+ 
+         self._setCmdForSpecificAn(cmdParams)
+ 
+-        for catName, catNum in catsNums.iteritems():
++        for catName, catNum in six.iteritems(catsNums):
+             if catNum[0] == catNum[1]:
+                 cmdParams.append(catName + "=" + str(catNum[0]))
+             else:
+@@ -736,8 +737,8 @@
+         """
+ 
+         inParams = []
+-        for col, v in self.data.GetAnalysisProperties()["cmdParams"][
+-                "cols"].iteritems():
++        for col, v in six.iteritems(self.data.GetAnalysisProperties()["cmdParams"]
++                                                                     ["cols"]):
+ 
+             if "inputField" in v:
+                 colInptF = v["inputField"]
+@@ -786,7 +787,7 @@
+         pt_ascii = ""
+         catNum = maxCat
+ 
+-        for catName, pts in catPts.iteritems():
++        for catName, pts in six.iteritems(catPts):
+ 
+             catsNums[catName] = [catNum + 1]
+             for pt in pts:
+@@ -871,7 +872,7 @@
+             return
+ 
+         # delete temporary maps in history steps which were deleted
+-        for removedStep in removedHistData.itervalues():
++        for removedStep in six.itervalues(removedHistData):
+             mapsNames = removedStep["tmp_data"]["maps"]
+             for vectMapName in mapsNames:
+                 tmpMap = self.tmp_maps.GetTmpVectMap(vectMapName)
+@@ -917,7 +918,7 @@
+         # update parameters
+         params = {}
+         histInputData = histStepData["an_params"]
+-        for inpName, inp in histInputData.iteritems():
++        for inpName, inp in six.iteritems(histInputData):
+             params[inpName] = str(inp)
+             if inpName == "input":
+                 inpMap = inp
+@@ -969,7 +970,7 @@
+                              subkey=[ptName, "checked"],
+                              value=data["use"])
+ 
+-            for param, value in params.iteritems():
++            for param, value in six.iteritems(params):
+ 
+                 if param == "input":
+                     inpMap = VectMap(self, value)
+Index: gui/wxpython/vnet/vnet_data.py
+===================================================================
+--- gui/wxpython/vnet/vnet_data.py	(revision 72963)
++++ gui/wxpython/vnet/vnet_data.py	(working copy)
+@@ -24,6 +24,7 @@
+ """
+ import os
+ import types
++import six
+ from copy import deepcopy
+ 
+ from grass.script.utils import try_remove
+@@ -177,11 +178,13 @@
+             return False
+ 
+         errLayerStr = ""
+-        for layer, layerLabel in {
++        vals = {
+                 'arc_layer': _("arc layer"),
+                 'node_layer': _("node layer"),
+                 'turn_layer': _("turntable layer"),
+-                'turn_cat_layer': _("unique categories layer")}.iteritems():
++                'turn_cat_layer': _("unique categories layer")
++                }
++        for layer, layerLabel in six.iteritems(vals):
+ 
+             if layer in ["turn_layer", "turn_cat_layer"] and not flags["t"]:
+                 continue
+@@ -327,7 +330,7 @@
+                 "pts_data": pts_data})
+ 
+     def SetPointData(self, pt_id, data):
+-        for col, v in data.iteritems():
++        for col, v in six.iteritems(data):
+             if col == 'use':
+                 continue
+ 
+@@ -402,7 +405,7 @@
+         textProp = self.pointsToDraw.GetPropertyVal("text")
+         textProp["font"].SetPointSize(ptSize + 2)
+ 
+-        for colKey, col in colors.iteritems():
++        for colKey, col in six.iteritems(colors):
+             pen = self.pointsToDraw.GetPen(colKey)
+             if pen:
+                 pen.SetColour(wx.Colour(col[0], col[1], col[2], 255))
+@@ -441,7 +444,7 @@
+ 
+         pt_list_data = [None] * len(self.cols['name'])
+ 
+-        for k, val in pt_data.iteritems():
++        for k, val in six.iteritems(pt_data):
+             pt_list_data[self.cols["name"].index(k)] = val
+ 
+         return pt_list_data
+@@ -599,7 +602,7 @@
+         i_red = 0
+         hidden_cols.sort()
+         for idx in hidden_cols:
+-            for dt in cols_data.itervalues():
++            for dt in six.itervalues(cols_data):
+                 dt.pop(idx - i_red)
+             i_red += 1
+ 
+@@ -632,7 +635,7 @@
+     def SetParams(self, params, flags):
+ 
+         changed_params = {}
+-        for p, v in params.iteritems():
++        for p, v in six.iteritems(params):
+             if p == "analysis" and v not in self.an_props.used_an:
+                 continue
+ 
+@@ -648,7 +651,7 @@
+                 changed_params[p] = v
+ 
+         changed_flags = {}
+-        for p, v in flags.iteritems():
++        for p, v in six.iteritems(flags):
+             if p in self.flags:
+                 self.flags[p] = v
+                 changed_flags[p] = v
+@@ -922,7 +925,7 @@
+ 
+         cols = self.vnetProperties[analysis]["cmdParams"]["cols"]
+ 
+-        for col, v in cols.iteritems():
++        for col, v in six.iteritems(cols):
+             if "inputField" in col:
+                 colInptF = v["inputField"]
+             else:
+Index: gui/wxpython/vnet/widgets.py
+===================================================================
+--- gui/wxpython/vnet/widgets.py	(revision 72963)
++++ gui/wxpython/vnet/widgets.py	(working copy)
+@@ -19,7 +19,7 @@
+ """
+ 
+ import os
+-import wx
++import six
+ from copy import copy, deepcopy
+ 
+ import wx
+@@ -170,7 +170,7 @@
+ 
+         self.selIdxs.append(itemIndexes)
+ 
+-        for hCol in self.hiddenCols.itervalues():
++        for hCol in six.itervalues(self.hiddenCols):
+             defVal = hCol['colsData'][iDefVal]
+             if type(hCol['colsData'][iColEd]).__name__ == "list":
+                 hCol['itemDataMap'].append(hCol['colsData'][iColEd][defVal])
+@@ -287,7 +287,7 @@
+         self.selIdxs.pop(key)
+ 
+         # update hidden columns
+-        for hCol in self.hiddenCols.itervalues():
++        for hCol in six.itervalues(self.hiddenCols):
+             hCol['itemDataMap'].pop(key)
+             hCol['selIdxs'].pop(key)
+ 
+Index: gui/wxpython/web_services/dialogs.py
+===================================================================
+--- gui/wxpython/web_services/dialogs.py	(revision 72963)
++++ gui/wxpython/web_services/dialogs.py	(working copy)
+@@ -22,6 +22,7 @@
+ 
+ import os
+ import sys
++import six
+ import shutil
+ 
+ from copy import deepcopy
+@@ -131,7 +132,7 @@
+             label=_("Output layer name:"))
+         self.layerName = wx.TextCtrl(parent=self.reqDataPanel, id=wx.ID_ANY)
+ 
+-        for ws in self.ws_panels.iterkeys():
++        for ws in six.iterkeys(self.ws_panels):
+             # set class WSPanel argument layerNameTxtCtrl
+             self.ws_panels[ws]['panel'] = WSPanel(parent=self.reqDataPanel,
+                                                   web_service=ws)
+@@ -212,7 +213,7 @@
+         reqDataSizer.Add(self.ch_ws_sizer, proportion=0,
+                          flag=wx.TOP | wx.EXPAND, border=5)
+ 
+-        for ws in self.ws_panels.iterkeys():
++        for ws in six.iterkeys(self.ws_panels):
+             reqDataSizer.Add(
+                 self.ws_panels[ws]['panel'],
+                 proportion=1,
+@@ -339,7 +340,7 @@
+ 
+     def _getCapFiles(self):
+         ws_cap_files = {}
+-        for v in self.ws_panels.itervalues():
++        for v in six.itervalues(self.ws_panels):
+             ws_cap_files[v['panel'].GetWebService()] = v['panel'].GetCapFile()
+ 
+         return ws_cap_files
+@@ -364,7 +365,7 @@
+         lname = event.GetString()
+         lname = lname.encode('ascii', 'replace')
+ 
+-        for v in self.ws_panels.itervalues():
++        for v in six.itervalues(self.ws_panels):
+             v['panel'].SetOutputLayerName(lname.strip())
+ 
+     def OnConnect(self, event):
+@@ -388,7 +389,7 @@
+ 
+         # number of panels already connected
+         self.finished_panels_num = 0
+-        for ws in self.ws_panels.iterkeys():
++        for ws in six.iterkeys(self.ws_panels):
+             self.ws_panels[ws]['panel'].ConnectToServer(
+                 url=server, username=self.username.GetValue(),
+                 password=self.password.GetValue())
+@@ -421,7 +422,7 @@
+         :return: list of found web services on server (identified as keys in self.ws_panels)
+         """
+         conn_ws = []
+-        for ws, data in self.ws_panels.iteritems():
++        for ws, data in six.iteritems(self.ws_panels):
+             if data['panel'].IsConnected():
+                 conn_ws.append(ws)
+ 
+@@ -648,7 +649,7 @@
+         self.revert_cmd = cmd
+ 
+         ws_cap = self._getWSfromCmd(cmd)
+-        for ws in self.ws_panels.iterkeys():
++        for ws in six.iterkeys(self.ws_panels):
+             # cap file used in cmd will be deleted, thnaks to the dialogs
+             # destructor
+             if ws == ws_cap and 'capfile' in cmd[1]:
+@@ -663,12 +664,12 @@
+         self.btn_ok.SetDefault()
+ 
+     def __del__(self):
+-        for f in self.revert_ws_cap_files.itervalues():
++        for f in six.itervalues(self.revert_ws_cap_files):
+             grass.try_remove(f)
+ 
+     def _setRevertCapFiles(self, ws_cap_files):
+ 
+-        for ws, f in ws_cap_files.iteritems():
++        for ws, f in six.iteritems(ws_cap_files):
+             if os.path.isfile(ws_cap_files[ws]):
+                 shutil.copyfile(f, self.revert_ws_cap_files[ws])
+             else:
+@@ -726,7 +727,7 @@
+ 
+         self.layerName.SetValue(cmd[1]['map'])
+ 
+-        for ws, data in self.ws_panels.iteritems():
++        for ws, data in six.iteritems(self.ws_panels):
+             cap_file = None
+ 
+             if ws in ws_cap_files:
+@@ -742,7 +743,7 @@
+         """
+         conn = {'url': '', 'username': '', 'password': ''}
+ 
+-        for k in conn.iterkeys():
++        for k in six.iterkeys(conn):
+             if k in cmd[1]:
+                 conn[k] = cmd[1][k]
+         return conn
+Index: gui/wxpython/web_services/widgets.py
+===================================================================
+--- gui/wxpython/web_services/widgets.py	(revision 72963)
++++ gui/wxpython/web_services/widgets.py	(working copy)
+@@ -18,6 +18,7 @@
+ 
+ import os
+ import sys
++import six
+ import shutil
+ 
+ from copy import deepcopy
+@@ -521,7 +522,7 @@
+         }
+ 
+         conn_cmd = []
+-        for k, v in self.conn.iteritems():
++        for k, v in six.iteritems(self.conn):
+             if v:
+                 conn_cmd.append("%s=%s" % (k, v))
+ 
+@@ -635,7 +636,7 @@
+         if 'method' in dcmd:
+             params['method'] = dcmd['method']
+ 
+-        for p, v in params.iteritems():
++        for p, v in six.iteritems(params):
+             if self.params[p]:
+                 self.params[p].SetStringSelection(v)
+ 
+@@ -1176,8 +1177,8 @@
+ 
+         setts = self.GetSettings()
+         self.servers_to_add = {}
+-        for k, v in self.default_servers.iteritems():
+-            if k not in setts.iterkeys():
++        for k, v in six.iteritems(self.default_servers):
++            if k not in six.iterkeys(setts):
+                 self.servers_to_add[k] = v
+             elif v != setts[k]:
+                 GMessage(parent=self,
+Index: gui/wxpython/wxplot/base.py
+===================================================================
+--- gui/wxpython/wxplot/base.py	(revision 72963)
++++ gui/wxpython/wxplot/base.py	(working copy)
+@@ -17,6 +17,7 @@
+ 
+ import os
+ import sys
++import six
+ 
+ import wx
+ 
+@@ -127,7 +128,7 @@
+         for assigning colors to images in imagery groups"""
+ 
+         self.colorDict = {}
+-        for clr in grass.named_colors.iterkeys():
++        for clr in six.iterkeys(grass.named_colors):
+             if clr == 'white':
+                 continue
+             r = grass.named_colors[clr][0] * 255
+Index: gui/wxpython/wxplot/profile.py
+===================================================================
+--- gui/wxpython/wxplot/profile.py	(revision 72963)
++++ gui/wxpython/wxplot/profile.py	(working copy)
+@@ -17,6 +17,7 @@
+ 
+ import os
+ import sys
++import six
+ import math
+ import numpy
+ 
+@@ -217,7 +218,7 @@
+         self.ylabel = ''
+         i = 0
+ 
+-        for r in self.raster.iterkeys():
++        for r in six.iterkeys(self.raster):
+             self.raster[r]['datalist'] = []
+             datalist = self.CreateDatalist(r, self.coordstr)
+             if len(datalist) > 0:
+@@ -412,7 +413,7 @@
+         message = []
+         title = _('Statistics for Profile(s)')
+ 
+-        for r in self.raster.iterkeys():
++        for r in six.iterkeys(self.raster):
+             try:
+                 rast = r.split('@')[0]
+                 statstr = 'Profile of %s\n\n' % rast
