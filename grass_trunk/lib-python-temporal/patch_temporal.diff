@@ -1,6 +1,6 @@
 Index: lib/python/temporal/c_libraries_interface.py
 ===================================================================
---- lib/python/temporal/c_libraries_interface.py	(revision 72927)
+--- lib/python/temporal/c_libraries_interface.py	(revision 72985)
 +++ lib/python/temporal/c_libraries_interface.py	(working copy)
 @@ -27,6 +27,7 @@
  from grass.pygrass.rpc.base import RPCServerBase
@@ -33,20 +33,31 @@ Index: lib/python/temporal/c_libraries_interface.py
 -            dbstring = dbstring.replace("$MAPSET", mapset)
 +            dbstring = dbstring.replace(encode("$GISDBASE"), libgis.G_gisdbase())
 +            dbstring = dbstring.replace(encode("$LOCATION_NAME"), libgis.G_location())
-+            dbstring = dbstring.replace(encode("$MAPSET"), mapset)
++            dbstring = dbstring.replace(encode("$MAPSET"), encode(mapset))
      except:
          raise
      finally:
-@@ -298,7 +300,8 @@
+@@ -297,8 +299,9 @@
+             in_search_path = libgis.G_is_mapset_in_search_path(mapset)
  
              c = 0
-             while mapset[c] != "\x00":
+-            while mapset[c] != "\x00":
 -                char_list += mapset[c]
++            while mapset[c] != b"\x00":
 +                val = decode(mapset[c])
 +                char_list += val
                  c += 1
  
              if permission >= 0 and in_search_path == 1:
+@@ -311,7 +314,7 @@
+ 
+         # We need to sort the mapset list, but the first one should be
+         # the current mapset
+-        current_mapset = libgis.G_mapset()
++        current_mapset = decode(libgis.G_mapset())
+         if current_mapset in mapset_list:
+             mapset_list.remove(current_mapset)
+         mapset_list.sort()
 @@ -566,7 +569,7 @@
          return None
  
@@ -56,9 +67,143 @@ Index: lib/python/temporal/c_libraries_interface.py
      libraster.Rast_get_cellhd(name, mapset, byref(region))
  
      kvp["north"] = region.north
+Index: lib/python/temporal/core.py
+===================================================================
+--- lib/python/temporal/core.py	(revision 72985)
++++ lib/python/temporal/core.py	(working copy)
+@@ -41,6 +41,7 @@
+ 
+ from .c_libraries_interface import *
+ from grass.pygrass import messages
++from grass.script.utils import decode, encode
+ # Import all supported database backends
+ # Ignore import errors since they are checked later
+ try:
+@@ -453,6 +454,7 @@
+     tgis_mapsets = {}
+ 
+     for mapset in mapsets:
++        mapset = decode(mapset)
+         driver = c_library_interface.get_driver_name(mapset)
+         database = c_library_interface.get_database_name(mapset)
+ 
+@@ -464,12 +466,12 @@
+             # Check if the temporal sqlite database exists
+             # We need to set non-existing databases in case the mapset is the current mapset
+             # to create it
+-            if (driver == "sqlite" and os.path.exists(database)) or mapset == get_current_mapset() :
++            if (encode(driver) == "sqlite" and os.path.exists(database)) or encode(mapset) == get_current_mapset() :
+                 tgis_mapsets[mapset] = (driver,  database)
+ 
+             # We need to warn if the connection is defined but the database does not
+             # exists
+-            if driver == "sqlite" and not os.path.exists(database):
++            if encode(driver) == "sqlite" and not os.path.exists(database):
+                 message_interface.warning("Temporal database connection defined as:\n" + \
+                                           database + "\nBut database file does not exist.")
+ 
+@@ -583,6 +585,7 @@
+             msgr.warning("TGIS_DISABLE_TIMESTAMP_WRITE is True")
+ 
+     if driver_string is not None and driver_string is not "":
++        driver_string = decode(driver_string)
+         if driver_string == "sqlite":
+             tgis_backend = driver_string
+             try:
+@@ -892,6 +895,8 @@
+     def get_dbmi(self,  mapset=None):
+         if mapset is None:
+             mapset = self.current_mapset
++
++        mapset = decode(mapset)
+         return self.connections[mapset].dbmi
+ 
+     def rollback(self,  mapset=None):
+@@ -945,6 +950,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to mogrify sql statement. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -967,6 +973,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to check table. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -983,6 +990,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to execute sql statement. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -993,6 +1001,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to fetch one. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -1003,6 +1012,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to fetch all. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -1020,6 +1030,7 @@
+         if mapset is None:
+             mapset = self.current_mapset
+ 
++        mapset = decode(mapset)
+         if mapset not in self.tgis_mapsets.keys():
+             self.msgr.fatal(_("Unable to execute transaction. " +
+                               self._create_mapset_error_message(mapset)))
+@@ -1032,7 +1043,7 @@
+                  "access mapset <%(mapset)s>, or "
+                  "mapset <%(mapset)s> has no temporal database. "
+                  "Accessible mapsets are: <%(mapsets)s>" % \
+-                 {"mapset": mapset,
++                 {"mapset": decode(mapset),
+                   "mapsets":','.join(self.tgis_mapsets.keys())})
+ 
+ ###############################################################################
+@@ -1057,12 +1068,12 @@
+         self.connected = False
+         if backend is None:
+             global tgis_backend
+-            if tgis_backend == "sqlite":
++            if decode(tgis_backend) == "sqlite":
+                 self.dbmi = sqlite3
+             else:
+                 self.dbmi = psycopg2
+         else:
+-            if backend == "sqlite":
++            if decode(backend) == "sqlite":
+                 self.dbmi = sqlite3
+             else:
+                 self.dbmi = psycopg2
+@@ -1108,6 +1119,9 @@
+         # Connection in the current mapset
+         if dbstring is None:
+             dbstring = self.dbstring
++        
++        dbstring = decode(dbstring)
++
+         try:
+             if self.dbmi.__name__ == "sqlite3":
+                 self.connection = self.dbmi.connect(dbstring,
 Index: lib/python/temporal/temporal_algebra.py
 ===================================================================
---- lib/python/temporal/temporal_algebra.py	(revision 72927)
+--- lib/python/temporal/temporal_algebra.py	(revision 72985)
 +++ lib/python/temporal/temporal_algebra.py	(working copy)
 @@ -462,9 +462,9 @@
  from .factory import dataset_factory
@@ -74,7 +219,7 @@ Index: lib/python/temporal/temporal_algebra.py
  from .datetime_math import create_suffix_from_datetime
 Index: lib/python/temporal/temporal_raster_base_algebra.py
 ===================================================================
---- lib/python/temporal/temporal_raster_base_algebra.py	(revision 72927)
+--- lib/python/temporal/temporal_raster_base_algebra.py	(revision 72985)
 +++ lib/python/temporal/temporal_raster_base_algebra.py	(working copy)
 @@ -56,7 +56,7 @@
  from .abstract_dataset import AbstractDatasetComparisonKeyStartTime
@@ -87,7 +232,7 @@ Index: lib/python/temporal/temporal_raster_base_algebra.py
  
 Index: lib/python/temporal/temporal_vector_algebra.py
 ===================================================================
---- lib/python/temporal/temporal_vector_algebra.py	(revision 72927)
+--- lib/python/temporal/temporal_vector_algebra.py	(revision 72985)
 +++ lib/python/temporal/temporal_vector_algebra.py	(working copy)
 @@ -56,7 +56,7 @@
  from .core import init_dbif, get_current_mapset
@@ -100,7 +245,7 @@ Index: lib/python/temporal/temporal_vector_algebra.py
  
 Index: lib/python/temporal/testsuite/test_register_function.py
 ===================================================================
---- lib/python/temporal/testsuite/test_register_function.py	(revision 72927)
+--- lib/python/temporal/testsuite/test_register_function.py	(revision 72985)
 +++ lib/python/temporal/testsuite/test_register_function.py	(working copy)
 @@ -222,7 +222,7 @@
          map_3 = tgis.RasterDataset("register_map_null@" + tgis.get_current_mapset())
