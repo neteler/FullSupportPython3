@@ -460,15 +460,34 @@ Index: gui/wxpython/dbmgr/vinfo.py
 ===================================================================
 --- gui/wxpython/dbmgr/vinfo.py	(revision 72985)
 +++ gui/wxpython/dbmgr/vinfo.py	(working copy)
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,8 @@
  
  import os
  import types
++import sys
 +import six
  
  import wx
  
-@@ -93,7 +94,7 @@
+@@ -25,6 +27,8 @@
+ from core.utils import _
+ import grass.script as grass
+ 
++if sys.version_info.major >= 3:
++    unicode = str
+ 
+ def GetUnicodeValue(value):
+     """Get unicode value
+@@ -33,7 +37,7 @@
+ 
+     :return: unicode value
+     """
+-    if isinstance(value, types.UnicodeType):
++    if isinstance(value, unicode):
+         return value
+ 
+     enc = UserSettings.Get(group='atm', key='encoding', subkey='value')
+@@ -93,7 +97,7 @@
          except KeyError:
              return []
  
@@ -477,7 +496,7 @@ Index: gui/wxpython/dbmgr/vinfo.py
              names[desc['index']] = name
  
          return names
-@@ -131,7 +132,7 @@
+@@ -131,7 +135,7 @@
                  continue
  
              table = record['Table']
@@ -486,7 +505,7 @@ Index: gui/wxpython/dbmgr/vinfo.py
                  if len(value) < 1:
                      value = None
                  else:
-@@ -141,7 +142,7 @@
+@@ -141,7 +145,7 @@
                          value = GetUnicodeValue(value)
                  self.tables[table][key]['values'].append(value)
  
@@ -1509,7 +1528,7 @@ Index: gui/wxpython/mapwin/buffered.py
              img = None
  
 -        for key in self.imagedict.keys():
-+        for key in list(self.imagedict):
++        for key in list(self.imagedict.keys()):
              if self.imagedict[key]['id'] == imgId:
                  del self.imagedict[key]
  
