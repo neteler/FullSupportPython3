@@ -378,6 +378,56 @@ Index: gui/wxpython/core/ws.py
              bandData = sDataset.GetRasterBand(sBandNnum).ReadRaster(
                  sXoff, sYoff, sXsize, sYsize, tXsize, tYsize, gdal.GDT_Byte)
              self.tDataset.GetRasterBand(tBandNum).WriteRaster(
+Index: gui/wxpython/datacatalog/dialogs.py
+===================================================================
+--- gui/wxpython/datacatalog/dialogs.py	(revision 72985)
++++ gui/wxpython/datacatalog/dialogs.py	(working copy)
+@@ -20,6 +20,7 @@
+ from gui_core.widgets import FloatValidator, IntegerValidator
+ from core.giface import Notification
+ from core.gcmd import RunCommand
++from gui_core.wrap import Button
+ 
+ from grass.script import parse_key_val, region_env
+ 
+@@ -76,11 +77,11 @@
+         self.SetEscapeId(self.btn_close.GetId())
+ 
+         # run
+-        self.btn_run = wx.Button(parent=self.panel, id=wx.ID_OK, label=_("Reproject"))
++        self.btn_run = Button(parent=self.panel, id=wx.ID_OK, label=_("Reproject"))
+         if self.etype == 'raster':
+-            self.btn_run.SetToolTipString(_("Reproject raster"))
++            self.btn_run.SetToolTip(_("Reproject raster"))
+         elif self.etype == 'vector':
+-            self.btn_run.SetToolTipString(_("Reproject vector"))
++            self.btn_run.SetToolTip(_("Reproject vector"))
+         self.btn_run.SetDefault()
+         self.btn_run.Bind(wx.EVT_BUTTON, self.OnReproject)
+ 
+Index: gui/wxpython/datacatalog/frame.py
+===================================================================
+--- gui/wxpython/datacatalog/frame.py	(revision 72985)
++++ gui/wxpython/datacatalog/frame.py	(working copy)
+@@ -26,6 +26,7 @@
+ from core.gcmd import RunCommand, GMessage
+ from datacatalog.tree import DataCatalogTree
+ from datacatalog.toolbars import DataCatalogToolbar
++from gui_core.wrap import Button
+ 
+ 
+ class DataCatalogFrame(wx.Frame):
+@@ -62,8 +63,8 @@
+                                                                    mapset=mapset))
+ 
+         # buttons
+-        self.btnClose = wx.Button(parent=self.panel, id=wx.ID_CLOSE)
+-        self.btnClose.SetToolTipString(_("Close GRASS GIS Data Catalog"))
++        self.btnClose = Button(parent=self.panel, id=wx.ID_CLOSE)
++        self.btnClose.SetToolTip(_("Close GRASS GIS Data Catalog"))
+         self.btnClose.SetDefault()
+ 
+         # events
 Index: gui/wxpython/dbmgr/dialogs.py
 ===================================================================
 --- gui/wxpython/dbmgr/dialogs.py	(revision 72985)
@@ -411,6 +461,43 @@ Index: gui/wxpython/dbmgr/sqlbuilder.py
  
  from core import globalvar
  from core.utils import _
+@@ -37,6 +38,7 @@
+ 
+ from core.gcmd import RunCommand, GError, GMessage
+ from dbmgr.vinfo import CreateDbInfoDesc, VectorDBInfo, GetUnicodeValue
++from gui_core.wrap import Button, TextCtrl
+ 
+ import grass.script as grass
+ 
+@@ -115,7 +117,7 @@
+                               label=" %s " % _("Query"))
+         sqlboxsizer = wx.StaticBoxSizer(sqlbox, wx.VERTICAL)
+ 
+-        self.text_sql = wx.TextCtrl(parent=self.panel, id=wx.ID_ANY,
++        self.text_sql = TextCtrl(parent=self.panel, id=wx.ID_ANY,
+                                     value='', size=(-1, 50),
+                                     style=wx.TE_MULTILINE)
+ 
+@@ -127,13 +129,12 @@
+         #
+         # buttons
+         #
+-        self.btn_clear = wx.Button(parent=self.panel, id=wx.ID_CLEAR)
+-        self.btn_clear.SetToolTipString(_("Set SQL statement to default"))
+-        self.btn_apply = wx.Button(parent=self.panel, id=wx.ID_APPLY)
+-        self.btn_apply.SetToolTipString(
+-            _("Apply SQL statement"))
+-        self.btn_close = wx.Button(parent=self.panel, id=wx.ID_CLOSE)
+-        self.btn_close.SetToolTipString(_("Close the dialog"))
++        self.btn_clear = Button(parent=self.panel, id=wx.ID_CLEAR)
++        self.btn_clear.SetToolTip(_("Set SQL statement to default"))
++        self.btn_apply = Button(parent=self.panel, id=wx.ID_APPLY)
++        self.btn_apply.SetToolTip(_("Apply SQL statement"))
++        self.btn_close = Button(parent=self.panel, id=wx.ID_CLOSE)
++        self.btn_close.SetToolTip(_("Close the dialog"))
+ 
+         self.btn_logic = {'is': ['=', ],
+                           'isnot': ['!=', ],
 @@ -149,7 +150,7 @@
                            'prc': ['%', ]}
  
@@ -420,6 +507,20 @@ Index: gui/wxpython/dbmgr/sqlbuilder.py
              btn = wx.Button(parent=self.btn_logicpanel, id=wx.ID_ANY,
                              label=value[0])
              self.btn_logic[key].append(btn.GetId())
+@@ -261,11 +262,11 @@
+         self.btn_unique = wx.Button(parent=self.valuespanel, id=wx.ID_ANY,
+                                     label=_("Get all values"))
+         self.btn_unique.Enable(False)
+-        self.btn_uniquesample = wx.Button(
++        self.btn_uniquesample = Button(
+             parent=self.valuespanel,
+             id=wx.ID_ANY,
+             label=_("Get sample"))
+-        self.btn_uniquesample.SetToolTipString(
++        self.btn_uniquesample.SetToolTip(
+             _("Get first 256 unique values as sample"))
+         self.btn_uniquesample.Enable(False)
+ 
 @@ -339,7 +340,7 @@
          self.btn_unique.Bind(wx.EVT_BUTTON, self.OnUniqueValues)
          self.btn_uniquesample.Bind(wx.EVT_BUTTON, self.OnSampleValues)
@@ -438,6 +539,23 @@ Index: gui/wxpython/dbmgr/sqlbuilder.py
              if event.GetId() == value[1]:
                  mark = value[0]
                  break
+@@ -494,13 +495,13 @@
+         SQLBuilder._doLayout(self, modeChoices)
+ 
+         self.text_sql.SetValue("SELECT * FROM %s" % self.tablename)
+-        self.text_sql.SetToolTipString(
++        self.text_sql.SetToolTip(
+             _("Example: %s") %
+             "SELECT * FROM roadsmajor WHERE MULTILANE = 'no' OR OBJECTID < 10")
+ 
+-        self.btn_verify = wx.Button(parent=self.panel, id=wx.ID_ANY,
++        self.btn_verify = Button(parent=self.panel, id=wx.ID_ANY,
+                                     label=_("Verify"))
+-        self.btn_verify.SetToolTipString(_("Verify SQL statement"))
++        self.btn_verify.SetToolTip(_("Verify SQL statement"))
+ 
+         self.buttonsizer.Insert(1, self.btn_verify)
+ 
 @@ -659,7 +660,7 @@
  
          self.btn_arithmeticpanel = wx.Panel(parent=self.panel, id=wx.ID_ANY)
@@ -526,6 +644,15 @@ Index: gui/wxpython/gcp/manager.py
  from copy import copy
  
  import wx
+@@ -56,7 +57,7 @@
+ from core.settings import UserSettings
+ from gcp.mapdisplay import MapFrame
+ from core.giface import Notification
+-from gui_core.wrap import SpinCtrl
++from gui_core.wrap import SpinCtrl, Button
+ 
+ from location_wizard.wizard import TitledPage as TitledPage
+ 
 @@ -1261,7 +1262,7 @@
                     "ucolor": "unused"}
          wpx = UserSettings.Get(group='gcpman', key='symbol', subkey='width')
@@ -535,6 +662,32 @@ Index: gui/wxpython/gcp/manager.py
              col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
              self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
                  col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+@@ -2617,19 +2618,19 @@
+         self.__CreateRectificationPage(notebook)
+ 
+         # buttons
+-        btnSave = wx.Button(self, wx.ID_SAVE)
+-        btnApply = wx.Button(self, wx.ID_APPLY)
+-        btnClose = wx.Button(self, wx.ID_CLOSE)
++        btnSave = Button(self, wx.ID_SAVE)
++        btnApply = Button(self, wx.ID_APPLY)
++        btnClose = Button(self, wx.ID_CLOSE)
+         btnApply.SetDefault()
+ 
+         # bindings
+         btnApply.Bind(wx.EVT_BUTTON, self.OnApply)
+-        btnApply.SetToolTipString(_("Apply changes for the current session"))
++        btnApply.SetToolTip(_("Apply changes for the current session"))
+         btnSave.Bind(wx.EVT_BUTTON, self.OnSave)
+-        btnSave.SetToolTipString(
++        btnSave.SetToolTip(
+             _("Apply and save changes to user settings file (default for next sessions)"))
+         btnClose.Bind(wx.EVT_BUTTON, self.OnClose)
+-        btnClose.SetToolTipString(_("Close dialog"))
++        btnClose.SetToolTip(_("Close dialog"))
+ 
+         # sizers
+         btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 Index: gui/wxpython/gmodeler/dialogs.py
 ===================================================================
 --- gui/wxpython/gmodeler/dialogs.py	(revision 72985)
@@ -547,7 +700,27 @@ Index: gui/wxpython/gmodeler/dialogs.py
  
  import wx
  import wx.lib.mixins.listctrl as listmix
-@@ -743,7 +744,7 @@
+@@ -39,6 +40,7 @@
+ from gui_core.gselect import Select, ElementSelect
+ from gmodeler.model import *
+ from lmgr.menudata import LayerManagerMenuData
++from gui_core.wrap import Button
+ 
+ from grass.script import task as gtask
+ 
+@@ -520,9 +522,9 @@
+         self.listBox = wx.StaticBox(parent=self.panel, id=wx.ID_ANY,
+                                     label=" %s " % _("List of items in loop"))
+ 
+-        self.btnSeries = wx.Button(parent=self.panel, id=wx.ID_ANY,
++        self.btnSeries = Button(parent=self.panel, id=wx.ID_ANY,
+                                    label=_("Series"))
+-        self.btnSeries.SetToolTipString(
++        self.btnSeries.SetToolTip(
+             _("Define map series as condition for the loop"))
+         self.btnSeries.Bind(wx.EVT_BUTTON, self.OnSeries)
+ 
+@@ -743,7 +745,7 @@
          """Populate the list"""
          self.itemDataMap = dict()
          i = 0
@@ -556,7 +729,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              self.itemDataMap[i] = [name, values['type'],
                                     values.get('value', ''),
                                     values.get('description', '')]
-@@ -752,7 +753,7 @@
+@@ -752,7 +754,7 @@
          self.itemCount = len(self.itemDataMap.keys())
          self.DeleteAllItems()
          i = 0
@@ -565,7 +738,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              index = self.InsertStringItem(i, name)
              self.SetStringItem(index, 0, name)
              self.SetStringItem(index, 1, vtype)
-@@ -767,7 +768,7 @@
+@@ -767,7 +769,7 @@
          :return: None on success
          :return: error string
          """
@@ -574,7 +747,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              if iname == name:
                  return _("Variable <%s> already exists in the model. "
                           "Adding variable failed.") % name
-@@ -937,7 +938,7 @@
+@@ -937,7 +939,7 @@
          self.DeleteAllItems()
          i = 0
          if len(self.columns) == 2:
@@ -583,7 +756,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                  index = self.InsertStringItem(i, str(i))
                  self.SetStringItem(index, 0, name)
                  self.SetStringItem(index, 1, desc)
-@@ -946,7 +947,7 @@
+@@ -946,7 +948,7 @@
                      self.CheckItem(index, True)
                  i += 1
          else:
@@ -604,7 +777,15 @@ Index: gui/wxpython/gmodeler/frame.py
  
  import wx
  from wx.lib import ogl
-@@ -380,7 +381,7 @@
+@@ -61,6 +62,7 @@
+ from gmodeler.giface import GraphicalModelerGrassInterface
+ from gmodeler.model import *
+ from gmodeler.dialogs import *
++from gui_core.wrap import Button
+ 
+ wxModelDone, EVT_MODEL_DONE = NewEvent()
+ 
+@@ -380,7 +382,7 @@
          dlg.Init(properties)
          if dlg.ShowModal() == wx.ID_OK:
              self.ModelChanged()
@@ -613,7 +794,18 @@ Index: gui/wxpython/gmodeler/frame.py
                  properties[key] = value
              for action in self.model.GetItems(objType=ModelAction):
                  action.GetTask().set_flag('overwrite', properties['overwrite'])
-@@ -1845,7 +1846,7 @@
+@@ -1754,8 +1756,8 @@
+         self.desc = wx.TextCtrl(parent=self, id=wx.ID_ANY)
+ 
+         # buttons
+-        self.btnAdd = wx.Button(parent=self, id=wx.ID_ADD)
+-        self.btnAdd.SetToolTipString(_("Add new variable to the model"))
++        self.btnAdd = Button(parent=self, id=wx.ID_ADD)
++        self.btnAdd.SetToolTip(_("Add new variable to the model"))
+         self.btnAdd.Enable(False)
+ 
+         # bindings
+@@ -1845,7 +1847,7 @@
      def UpdateModelVariables(self):
          """Update model variables"""
          variables = dict()
@@ -622,6 +814,27 @@ Index: gui/wxpython/gmodeler/frame.py
              name = values[0]
              variables[name] = {'type': str(values[1])}
              if values[2]:
+@@ -1980,14 +1982,14 @@
+                                     label=" %s " % _("Python script"))
+         self.body = PyStc(parent=self, statusbar=self.parent.GetStatusBar())
+ 
+-        self.btnRun = wx.Button(parent=self, id=wx.ID_ANY, label=_("&Run"))
+-        self.btnRun.SetToolTipString(_("Run python script"))
++        self.btnRun = Button(parent=self, id=wx.ID_ANY, label=_("&Run"))
++        self.btnRun.SetToolTip(_("Run python script"))
+         self.Bind(wx.EVT_BUTTON, self.OnRun, self.btnRun)
+-        self.btnSaveAs = wx.Button(parent=self, id=wx.ID_SAVEAS)
+-        self.btnSaveAs.SetToolTipString(_("Save python script to file"))
++        self.btnSaveAs = Button(parent=self, id=wx.ID_SAVEAS)
++        self.btnSaveAs.SetToolTip(_("Save python script to file"))
+         self.Bind(wx.EVT_BUTTON, self.OnSaveAs, self.btnSaveAs)
+-        self.btnRefresh = wx.Button(parent=self, id=wx.ID_REFRESH)
+-        self.btnRefresh.SetToolTipString(_("Refresh python script based on the model.\n"
++        self.btnRefresh = Button(parent=self, id=wx.ID_REFRESH)
++        self.btnRefresh.SetToolTip(_("Refresh python script based on the model.\n"
+                                            "It will discards all local changes."))
+         self.Bind(wx.EVT_BUTTON, self.OnRefresh, self.btnRefresh)
+ 
 Index: gui/wxpython/gmodeler/model.py
 ===================================================================
 --- gui/wxpython/gmodeler/model.py	(revision 72985)
@@ -706,6 +919,37 @@ Index: gui/wxpython/gmodeler/model.py
              nameOrdered[params['idx']] = name
          for name in nameOrdered:
              params = self.params[name]
+Index: gui/wxpython/gmodeler/preferences.py
+===================================================================
+--- gui/wxpython/gmodeler/preferences.py	(revision 72985)
++++ gui/wxpython/gmodeler/preferences.py	(working copy)
+@@ -22,7 +22,7 @@
+ from gui_core.preferences import PreferencesBaseDialog
+ from core.settings import UserSettings
+ from core.utils import _
+-from gui_core.wrap import SpinCtrl
++from gui_core.wrap import SpinCtrl, Button
+ 
+ 
+ class PreferencesDialog(PreferencesBaseDialog):
+@@ -687,13 +687,13 @@
+                 subkey='enabled'))
+ 
+         # buttons
+-        self.btnOk = wx.Button(self, wx.ID_OK)
+-        self.btnCancel = wx.Button(self, wx.ID_CANCEL)
++        self.btnOk = Button(self, wx.ID_OK)
++        self.btnCancel = Button(self, wx.ID_CANCEL)
+         self.btnOk.SetDefault()
+ 
+-        self.btnOk.SetToolTipString(_("Apply properties"))
++        self.btnOk.SetToolTip(_("Apply properties"))
+         self.btnOk.SetDefault()
+-        self.btnCancel.SetToolTipString(_("Close dialog and ignore changes"))
++        self.btnCancel.SetToolTip(_("Close dialog and ignore changes"))
+ 
+         self.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
+ 
 Index: gui/wxpython/gui_core/dialogs.py
 ===================================================================
 --- gui/wxpython/gui_core/dialogs.py	(revision 72985)
@@ -718,6 +962,92 @@ Index: gui/wxpython/gui_core/dialogs.py
  
  import wx
  
+@@ -47,7 +48,7 @@
+ from core.utils import _
+ from core.settings import UserSettings
+ from core.debug import Debug
+-from gui_core.wrap import SpinCtrl, TextCtrl
++from gui_core.wrap import SpinCtrl, TextCtrl, Button, CheckListBox
+ 
+ 
+ class SimpleDialog(wx.Dialog):
+@@ -662,14 +663,14 @@
+         self.bodySizer = self._createDialogBody()
+ 
+         # buttons
+-        btnOk = wx.Button(parent=self, id=wx.ID_OK)
+-        btnApply = wx.Button(parent=self, id=wx.ID_APPLY)
+-        btnClose = wx.Button(parent=self, id=wx.ID_CANCEL)
++        btnOk = Button(parent=self, id=wx.ID_OK)
++        btnApply = Button(parent=self, id=wx.ID_APPLY)
++        btnClose = Button(parent=self, id=wx.ID_CANCEL)
+ 
+-        btnOk.SetToolTipString(
++        btnOk.SetToolTip(
+             _("Apply changes to selected group and close dialog"))
+-        btnApply.SetToolTipString(_("Apply changes to selected group"))
+-        btnClose.SetToolTipString(_("Close dialog, changes are not applied"))
++        btnApply.SetToolTip(_("Apply changes to selected group"))
++        btnClose.SetToolTip(_("Close dialog, changes are not applied"))
+ 
+         # btnOk.SetDefault()
+ 
+@@ -781,10 +782,10 @@
+                 1,
+                 0))
+ 
+-        self.gfilter = wx.TextCtrl(parent=self.gListPanel, id=wx.ID_ANY,
++        self.gfilter = TextCtrl(parent=self.gListPanel, id=wx.ID_ANY,
+                                    value="",
+                                    size=(250, -1))
+-        self.gfilter.SetToolTipString(filter_tooltip)
++        self.gfilter.SetToolTip(filter_tooltip)
+ 
+         gListSizer.Add(self.gfilter,
+                        flag=wx.EXPAND,
+@@ -807,13 +808,13 @@
+             style=wx.LB_MULTIPLE | wx.LB_NEEDED_SB)
+         sizer.Add(self.gLayerBox, proportion=1, flag=wx.EXPAND)
+ 
+-        self.addLayer = wx.Button(self.gListPanel, id=wx.ID_ADD)
+-        self.addLayer.SetToolTipString(
++        self.addLayer = Button(self.gListPanel, id=wx.ID_ADD)
++        self.addLayer.SetToolTip(
+             _("Select map layers and add them to the list."))
+         buttonSizer.Add(self.addLayer, flag=wx.BOTTOM, border=10)
+ 
+-        self.removeLayer = wx.Button(self.gListPanel, id=wx.ID_REMOVE)
+-        self.removeLayer.SetToolTipString(
++        self.removeLayer = Button(self.gListPanel, id=wx.ID_REMOVE)
++        self.removeLayer.SetToolTip(
+             _("Remove selected layer(s) from list."))
+         buttonSizer.Add(self.removeLayer)
+         sizer.Add(buttonSizer, flag=wx.LEFT, border=5)
+@@ -849,10 +850,10 @@
+                 1,
+                 0))
+ 
+-        self.subgfilter = wx.TextCtrl(parent=self.subgListPanel, id=wx.ID_ANY,
++        self.subgfilter = TextCtrl(parent=self.subgListPanel, id=wx.ID_ANY,
+                                       value="",
+                                       size=(250, -1))
+-        self.subgfilter.SetToolTipString(filter_tooltip)
++        self.subgfilter.SetToolTip(filter_tooltip)
+ 
+         subgListSizer.Add(self.subgfilter,
+                           flag=wx.EXPAND,
+@@ -868,9 +869,9 @@
+                 2,
+                 0))
+ 
+-        self.subgListBox = wx.CheckListBox(
++        self.subgListBox = CheckListBox(
+             parent=self.subgListPanel, id=wx.ID_ANY, size=(250, 100))
+-        self.subgListBox.SetToolTipString(
++        self.subgListBox.SetToolTip(
+             _("Check maps from group to be included into subgroup."))
+ 
+         subgListSizer.Add(self.subgListBox, flag=wx.EXPAND, pos=(2, 1))
 @@ -1061,7 +1062,7 @@
          """Get layers"""
          if self.edit_subg:
@@ -755,7 +1085,64 @@ Index: gui/wxpython/gui_core/forms.py
  import re
  import codecs
  
-@@ -2484,7 +2490,7 @@
+@@ -100,7 +106,8 @@
+ from gui_core.widgets import FloatValidator, GNotebook, FormNotebook, FormListbook
+ from core.giface import Notification
+ from gui_core.widgets import LayersList
+-from gui_core.wrap import BitmapFromImage, Button, StaticText, StaticBox, SpinCtrl
++from gui_core.wrap import BitmapFromImage, Button, StaticText, StaticBox, SpinCtrl, \
++    CheckBox, BitmapButton
+ from core.debug import Debug
+ 
+ wxUpdateDialog, EVT_DIALOG_UPDATE = NewEvent()
+@@ -686,7 +693,7 @@
+ 
+         if self.get_dcmd is None and hasNew:
+             # close dialog when command is terminated
+-            self.closebox = wx.CheckBox(
++            self.closebox = CheckBox(
+                 parent=self.panel,
+                 label=_('Close dialog on finish'),
+                 style=wx.NO_BORDER)
+@@ -695,7 +702,7 @@
+                     group='cmd',
+                     key='closeDlg',
+                     subkey='enabled'))
+-            self.closebox.SetToolTipString(
++            self.closebox.SetToolTip(
+                 _(
+                     "Close dialog when command is successfully finished. "
+                     "Change this settings in Preferences dialog ('Command' tab)."))
+@@ -1041,13 +1048,13 @@
+             title_sizer = wx.BoxSizer(wx.HORIZONTAL)
+             rtitle_txt = StaticText(parent=which_panel,
+                                     label='(' + f['name'] + ')')
+-            chk = wx.CheckBox(
++            chk = CheckBox(
+                 parent=which_panel,
+                 label=title,
+                 style=wx.NO_BORDER)
+             self.label_id.append(chk.GetId())
+             if tooltip:
+-                chk.SetToolTipString(tooltip)
++                chk.SetToolTip(tooltip)
+             chk.SetValue(f.get('value', False))
+             title_sizer.Add(chk, proportion=1,
+                             flag=wx.EXPAND)
+@@ -1550,10 +1557,10 @@
+                                 os.path.join(
+                                     globalvar.ICONDIR, iconTheme,
+                                     'map-info.png'))
+-                            bb = wx.BitmapButton(
++                            bb = BitmapButton(
+                                 parent=which_panel, bitmap=bitmap)
+                             bb.Bind(wx.EVT_BUTTON, self.OnTimelineTool)
+-                            bb.SetToolTipString(
++                            bb.SetToolTip(
+                                 _("Show graphical representation of temporal extent of dataset(s) ."))
+                             p['wxId'].append(bb.GetId())
+ 
+@@ -2484,7 +2491,7 @@
          self.OnUpdateSelection(event)
  
      def OnUpdateDialog(self, event):
@@ -921,6 +1308,31 @@ Index: gui/wxpython/gui_core/query.py
              if isinstance(v, str):
                  k = DecodeString(k)
              if isinstance(v, dict):
+Index: gui/wxpython/gui_core/toolbars.py
+===================================================================
+--- gui/wxpython/gui_core/toolbars.py	(revision 72985)
++++ gui/wxpython/gui_core/toolbars.py	(working copy)
+@@ -27,7 +27,7 @@
+ from icons.icon import MetaIcon
+ from collections import defaultdict
+ from core.globalvar import IMGDIR
+-from gui_core.wrap import ToolBar, Menu
++from gui_core.wrap import ToolBar, Menu, BitmapButton
+ 
+ from grass.pydispatch.signal import Signal
+ 
+@@ -268,9 +268,9 @@
+         else:
+             bitmap = wx.ArtProvider.GetBitmap(
+                 id=wx.ART_MISSING_IMAGE, client=wx.ART_TOOLBAR)
+-        button = wx.BitmapButton(parent=self, id=wx.ID_ANY, size=(
++        button = BitmapButton(parent=self, id=wx.ID_ANY, size=(
+             (-1, self.GetToolSize()[1])), bitmap=bitmap, style=wx.NO_BORDER)
+-        button.SetToolTipString(tooltip)
++        button.SetToolTip(tooltip)
+ 
+         return button
+ 
 Index: gui/wxpython/gui_core/widgets.py
 ===================================================================
 --- gui/wxpython/gui_core/widgets.py	(revision 72985)
@@ -942,6 +1354,50 @@ Index: gui/wxpython/gui_core/widgets.py
                  first = True
                  for v in values:
                      # escaping characters
+Index: gui/wxpython/gui_core/wrap.py
+===================================================================
+--- gui/wxpython/gui_core/wrap.py	(revision 72985)
++++ gui/wxpython/gui_core/wrap.py	(working copy)
+@@ -99,6 +99,19 @@
+             wx.Button.SetToolTipString(self, tip)
+ 
+ 
++class BitmapButton(wx.BitmapButton):
++    """Wrapper around wx.BitmapButton to have more control
++    over the widget on different platforms/wxpython versions"""
++    def __init__(self, *args, **kwargs):
++        wx.BitmapButton.__init__(self, *args, **kwargs)
++
++    def SetToolTip(self, tip):
++        if wxPythonPhoenix:
++            wx.BitmapButton.SetToolTip(self, tipString=tip)
++        else:
++            wx.BitmapButton.SetToolTipString(self, tip)
++
++
+ class GenBitmapButton(buttons.GenBitmapButton):
+     """Wrapper around GenBitmapButton to have more control
+     over the widget on different platforms/wxpython versions"""
+@@ -151,6 +164,19 @@
+             wx.StaticBox.SetToolTipString(self, tip)
+ 
+ 
++class CheckListBox(wx.CheckListBox):
++    """Wrapper around wx.CheckListBox to have more control
++    over the widget on different platforms/wxpython versions"""
++    def __init__(self, *args, **kwargs):
++        wx.CheckListBox.__init__(self, *args, **kwargs)
++
++    def SetToolTip(self, tip):
++        if wxPythonPhoenix:
++            wx.CheckListBox.SetToolTip(self, tipString=tip)
++        else:
++            wx.CheckListBox.SetToolTipString(self, tip)
++
++
+ class TextCtrl(wx.TextCtrl):
+     """Wrapper around wx.TextCtrl to have more control
+     over the widget on different platforms/wxpython versions"""
 Index: gui/wxpython/iclass/frame.py
 ===================================================================
 --- gui/wxpython/iclass/frame.py	(revision 72985)
@@ -1845,6 +2301,22 @@ Index: gui/wxpython/photo2image/ip2i_manager.py
              col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
              self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
                  col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+Index: gui/wxpython/psmap/frame.py
+===================================================================
+--- gui/wxpython/psmap/frame.py	(revision 72985)
++++ gui/wxpython/psmap/frame.py	(working copy)
+@@ -17,7 +17,10 @@
+ 
+ import os
+ import sys
+-import Queue
++if sys.version_info.major == 2:
++    import Queue
++else:
++    import queue as Queue
+ from math import sin, cos, pi, sqrt
+ 
+ import wx
 Index: gui/wxpython/psmap/instructions.py
 ===================================================================
 --- gui/wxpython/psmap/instructions.py	(revision 72985)
@@ -1868,6 +2340,32 @@ Index: gui/wxpython/psmap/instructions.py
                                  instr[key] = float(value)
                              break
                          except KeyError:
+Index: gui/wxpython/psmap/utils.py
+===================================================================
+--- gui/wxpython/psmap/utils.py	(revision 72985)
++++ gui/wxpython/psmap/utils.py	(working copy)
+@@ -385,14 +385,13 @@
+     if not portrait:
+         orient = 'r'
+     try:
+-        bb = map(
+-            float,
+-            grass.read_command(
+-                'ps.map',
+-                flags='b' +
+-                orient,
+-                quiet=True,
+-                input=filename).strip().split('=')[1].split(','))
++        bb = list(map(float,
++                    grass.read_command(
++                    'ps.map',
++                    flags='b' +
++                    orient,
++                    quiet=True,
++                    input=filename).strip().split('=')[1].split(',')))
+     except (grass.ScriptError, IndexError):
+         GError(message=_("Unable to run `ps.map -b`"))
+         return None
 Index: gui/wxpython/rlisetup/sampling_frame.py
 ===================================================================
 --- gui/wxpython/rlisetup/sampling_frame.py	(revision 72985)
