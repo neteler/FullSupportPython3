@@ -1,6 +1,6 @@
 Index: gui/wxpython/animation/anim.py
 ===================================================================
---- gui/wxpython/animation/anim.py	(revision 72985)
+--- gui/wxpython/animation/anim.py	(revision 73002)
 +++ gui/wxpython/animation/anim.py	(working copy)
 @@ -15,7 +15,7 @@
  """
@@ -13,30 +13,17 @@ Index: gui/wxpython/animation/anim.py
  
 Index: gui/wxpython/animation/dialogs.py
 ===================================================================
---- gui/wxpython/animation/dialogs.py	(revision 72985)
+--- gui/wxpython/animation/dialogs.py	(revision 73002)
 +++ gui/wxpython/animation/dialogs.py	(working copy)
 @@ -39,7 +39,7 @@
  from core.utils import _
  from gui_core.gselect import Select
  from gui_core.widgets import FloatValidator
 -from gui_core.wrap import SpinCtrl
-+from gui_core.wrap import SpinCtrl, CheckBox, TextCtrl, RadioButton
++from gui_core.wrap import SpinCtrl, CheckBox, TextCtrl
  
  from animation.utils import TemporalMode, getRegisteredMaps, getNameAndLayer, getCpuCount
  from animation.data import AnimationData, AnimLayer
-@@ -574,9 +574,9 @@
-         gridSizer.Add(
-             self.endRegion, pos=(1, 1),
-             flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND)
--        self.zoomRadio = wx.RadioButton(panel, label=_("Zoom value:"))
--        self.zoomRadio.SetToolTipString(_("N-S/E-W distances in map units used to "
--                                          "gradually reduce region."))
-+        self.zoomRadio = RadioButton(panel, label=_("Zoom value:"))
-+        self.zoomRadio.SetToolTip(_("N-S/E-W distances in map units used to "
-+                                    "gradually reduce region."))
-         gridSizer.Add(self.zoomRadio, pos=(2, 0), flag=wx.EXPAND)
- 
-         zoomSizer = wx.BoxSizer(wx.HORIZONTAL)
 @@ -1296,12 +1296,12 @@
              parent=aviPanel,
              id=wx.ID_ANY,
@@ -67,7 +54,7 @@ Index: gui/wxpython/animation/dialogs.py
                  "you can display 'no data frame' (checked option) or "
 Index: gui/wxpython/animation/frame.py
 ===================================================================
---- gui/wxpython/animation/frame.py	(revision 72985)
+--- gui/wxpython/animation/frame.py	(revision 73002)
 +++ gui/wxpython/animation/frame.py	(working copy)
 @@ -22,6 +22,7 @@
  import wx
@@ -88,7 +75,7 @@ Index: gui/wxpython/animation/frame.py
                  wx.aui.AuiPaneInfo().PaneBorder(False).Name(
 Index: gui/wxpython/animation/mapwindow.py
 ===================================================================
---- gui/wxpython/animation/mapwindow.py	(revision 72985)
+--- gui/wxpython/animation/mapwindow.py	(revision 73002)
 +++ gui/wxpython/animation/mapwindow.py	(working copy)
 @@ -18,7 +18,7 @@
  import wx
@@ -112,7 +99,7 @@ Index: gui/wxpython/animation/mapwindow.py
          # platforms at initialization, but little harm done.
 Index: gui/wxpython/animation/utils.py
 ===================================================================
---- gui/wxpython/animation/utils.py	(revision 72985)
+--- gui/wxpython/animation/utils.py	(revision 73002)
 +++ gui/wxpython/animation/utils.py	(working copy)
 @@ -20,6 +20,7 @@
  import os
@@ -133,7 +120,7 @@ Index: gui/wxpython/animation/utils.py
                      newNames.append(name + "@" + mapset)
 Index: gui/wxpython/core/gcmd.py
 ===================================================================
---- gui/wxpython/core/gcmd.py	(revision 72985)
+--- gui/wxpython/core/gcmd.py	(revision 73002)
 +++ gui/wxpython/core/gcmd.py	(working copy)
 @@ -703,8 +703,8 @@
      :return: returncode, stdout, messages (read == True and getErrorMsg == True)
@@ -148,7 +135,7 @@ Index: gui/wxpython/core/gcmd.py
  
 Index: gui/wxpython/core/gconsole.py
 ===================================================================
---- gui/wxpython/core/gconsole.py	(revision 72985)
+--- gui/wxpython/core/gconsole.py	(revision 73002)
 +++ gui/wxpython/core/gconsole.py	(working copy)
 @@ -27,7 +27,12 @@
  import re
@@ -166,7 +153,7 @@ Index: gui/wxpython/core/gconsole.py
  
 Index: gui/wxpython/core/gthread.py
 ===================================================================
---- gui/wxpython/core/gthread.py	(revision 72985)
+--- gui/wxpython/core/gthread.py	(revision 73002)
 +++ gui/wxpython/core/gthread.py	(working copy)
 @@ -19,7 +19,11 @@
  
@@ -183,7 +170,7 @@ Index: gui/wxpython/core/gthread.py
  
 Index: gui/wxpython/core/render.py
 ===================================================================
---- gui/wxpython/core/render.py	(revision 72985)
+--- gui/wxpython/core/render.py	(revision 73002)
 +++ gui/wxpython/core/render.py	(working copy)
 @@ -1154,7 +1154,7 @@
          """
@@ -196,7 +183,7 @@ Index: gui/wxpython/core/render.py
              one_type = False
 Index: gui/wxpython/core/treemodel.py
 ===================================================================
---- gui/wxpython/core/treemodel.py	(revision 72985)
+--- gui/wxpython/core/treemodel.py	(revision 73002)
 +++ gui/wxpython/core/treemodel.py	(working copy)
 @@ -15,6 +15,7 @@
  
@@ -217,7 +204,7 @@ Index: gui/wxpython/core/treemodel.py
                      {'indent': (indent + 2) * ' ', 'key': key, 'value': value})
 Index: gui/wxpython/core/units.py
 ===================================================================
---- gui/wxpython/core/units.py	(revision 72985)
+--- gui/wxpython/core/units.py	(revision 73002)
 +++ gui/wxpython/core/units.py	(working copy)
 @@ -21,6 +21,7 @@
  @author Martin Landa <landa.martin gmail.com>
@@ -238,7 +225,7 @@ Index: gui/wxpython/core/units.py
          return 0
 Index: gui/wxpython/core/utils.py
 ===================================================================
---- gui/wxpython/core/utils.py	(revision 72985)
+--- gui/wxpython/core/utils.py	(revision 73002)
 +++ gui/wxpython/core/utils.py	(working copy)
 @@ -20,6 +20,7 @@
  import shlex
@@ -280,7 +267,7 @@ Index: gui/wxpython/core/utils.py
      # write also skipped lines
 Index: gui/wxpython/core/workspace.py
 ===================================================================
---- gui/wxpython/core/workspace.py	(revision 72985)
+--- gui/wxpython/core/workspace.py	(revision 73002)
 +++ gui/wxpython/core/workspace.py	(working copy)
 @@ -19,6 +19,7 @@
  import os
@@ -415,7 +402,7 @@ Index: gui/wxpython/core/workspace.py
                          if value is None:
 Index: gui/wxpython/core/ws.py
 ===================================================================
---- gui/wxpython/core/ws.py	(revision 72985)
+--- gui/wxpython/core/ws.py	(revision 73002)
 +++ gui/wxpython/core/ws.py	(working copy)
 @@ -19,6 +19,7 @@
  import sys
@@ -445,7 +432,7 @@ Index: gui/wxpython/core/ws.py
              self.tDataset.GetRasterBand(tBandNum).WriteRaster(
 Index: gui/wxpython/datacatalog/dialogs.py
 ===================================================================
---- gui/wxpython/datacatalog/dialogs.py	(revision 72985)
+--- gui/wxpython/datacatalog/dialogs.py	(revision 73002)
 +++ gui/wxpython/datacatalog/dialogs.py	(working copy)
 @@ -20,6 +20,7 @@
  from gui_core.widgets import FloatValidator, IntegerValidator
@@ -472,7 +459,7 @@ Index: gui/wxpython/datacatalog/dialogs.py
  
 Index: gui/wxpython/datacatalog/frame.py
 ===================================================================
---- gui/wxpython/datacatalog/frame.py	(revision 72985)
+--- gui/wxpython/datacatalog/frame.py	(revision 73002)
 +++ gui/wxpython/datacatalog/frame.py	(working copy)
 @@ -26,6 +26,7 @@
  from core.gcmd import RunCommand, GMessage
@@ -495,7 +482,7 @@ Index: gui/wxpython/datacatalog/frame.py
          # events
 Index: gui/wxpython/dbmgr/dialogs.py
 ===================================================================
---- gui/wxpython/dbmgr/dialogs.py	(revision 72985)
+--- gui/wxpython/dbmgr/dialogs.py	(revision 73002)
 +++ gui/wxpython/dbmgr/dialogs.py	(working copy)
 @@ -19,6 +19,7 @@
  
@@ -516,7 +503,7 @@ Index: gui/wxpython/dbmgr/dialogs.py
                  break
 Index: gui/wxpython/dbmgr/sqlbuilder.py
 ===================================================================
---- gui/wxpython/dbmgr/sqlbuilder.py	(revision 72985)
+--- gui/wxpython/dbmgr/sqlbuilder.py	(revision 73002)
 +++ gui/wxpython/dbmgr/sqlbuilder.py	(working copy)
 @@ -28,6 +28,7 @@
  
@@ -641,7 +628,7 @@ Index: gui/wxpython/dbmgr/sqlbuilder.py
          self.OnMode(None)
 Index: gui/wxpython/dbmgr/vinfo.py
 ===================================================================
---- gui/wxpython/dbmgr/vinfo.py	(revision 72985)
+--- gui/wxpython/dbmgr/vinfo.py	(revision 73002)
 +++ gui/wxpython/dbmgr/vinfo.py	(working copy)
 @@ -16,6 +16,8 @@
  
@@ -699,7 +686,7 @@ Index: gui/wxpython/dbmgr/vinfo.py
                  if key in ret:
 Index: gui/wxpython/gcp/manager.py
 ===================================================================
---- gui/wxpython/gcp/manager.py	(revision 72985)
+--- gui/wxpython/gcp/manager.py	(revision 73002)
 +++ gui/wxpython/gcp/manager.py	(working copy)
 @@ -32,6 +32,7 @@
  import sys
@@ -755,7 +742,7 @@ Index: gui/wxpython/gcp/manager.py
          btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 Index: gui/wxpython/gmodeler/dialogs.py
 ===================================================================
---- gui/wxpython/gmodeler/dialogs.py	(revision 72985)
+--- gui/wxpython/gmodeler/dialogs.py	(revision 73002)
 +++ gui/wxpython/gmodeler/dialogs.py	(working copy)
 @@ -25,6 +25,7 @@
  
@@ -832,7 +819,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                  self.SetStringItem(index, 1, inloop)
 Index: gui/wxpython/gmodeler/frame.py
 ===================================================================
---- gui/wxpython/gmodeler/frame.py	(revision 72985)
+--- gui/wxpython/gmodeler/frame.py	(revision 73002)
 +++ gui/wxpython/gmodeler/frame.py	(working copy)
 @@ -27,6 +27,7 @@
  import copy
@@ -902,7 +889,7 @@ Index: gui/wxpython/gmodeler/frame.py
  
 Index: gui/wxpython/gmodeler/model.py
 ===================================================================
---- gui/wxpython/gmodeler/model.py	(revision 72985)
+--- gui/wxpython/gmodeler/model.py	(revision 73002)
 +++ gui/wxpython/gmodeler/model.py	(working copy)
 @@ -32,6 +32,7 @@
  import re
@@ -986,7 +973,7 @@ Index: gui/wxpython/gmodeler/model.py
              params = self.params[name]
 Index: gui/wxpython/gmodeler/preferences.py
 ===================================================================
---- gui/wxpython/gmodeler/preferences.py	(revision 72985)
+--- gui/wxpython/gmodeler/preferences.py	(revision 73002)
 +++ gui/wxpython/gmodeler/preferences.py	(working copy)
 @@ -22,7 +22,7 @@
  from gui_core.preferences import PreferencesBaseDialog
@@ -1017,7 +1004,7 @@ Index: gui/wxpython/gmodeler/preferences.py
  
 Index: gui/wxpython/gui_core/dialogs.py
 ===================================================================
---- gui/wxpython/gui_core/dialogs.py	(revision 72985)
+--- gui/wxpython/gui_core/dialogs.py	(revision 73002)
 +++ gui/wxpython/gui_core/dialogs.py	(working copy)
 @@ -31,6 +31,7 @@
  import os
@@ -1133,7 +1120,7 @@ Index: gui/wxpython/gui_core/dialogs.py
          self._checkSubGSellAll()
 Index: gui/wxpython/gui_core/forms.py
 ===================================================================
---- gui/wxpython/gui_core/forms.py	(revision 72985)
+--- gui/wxpython/gui_core/forms.py	(revision 73002)
 +++ gui/wxpython/gui_core/forms.py	(working copy)
 @@ -54,7 +54,13 @@
  import os
@@ -1218,7 +1205,7 @@ Index: gui/wxpython/gui_core/forms.py
          self.parent.updateValuesHook()
 Index: gui/wxpython/gui_core/ghelp.py
 ===================================================================
---- gui/wxpython/gui_core/ghelp.py	(revision 72985)
+--- gui/wxpython/gui_core/ghelp.py	(revision 73002)
 +++ gui/wxpython/gui_core/ghelp.py	(working copy)
 @@ -23,6 +23,7 @@
  import re
@@ -1248,7 +1235,7 @@ Index: gui/wxpython/gui_core/ghelp.py
                  if not skip:
 Index: gui/wxpython/gui_core/goutput.py
 ===================================================================
---- gui/wxpython/gui_core/goutput.py	(revision 72985)
+--- gui/wxpython/gui_core/goutput.py	(revision 73002)
 +++ gui/wxpython/gui_core/goutput.py	(working copy)
 @@ -629,7 +629,7 @@
              group='appearance',
@@ -1261,7 +1248,7 @@ Index: gui/wxpython/gui_core/goutput.py
  
 Index: gui/wxpython/gui_core/gselect.py
 ===================================================================
---- gui/wxpython/gui_core/gselect.py	(revision 72985)
+--- gui/wxpython/gui_core/gselect.py	(revision 73002)
 +++ gui/wxpython/gui_core/gselect.py	(working copy)
 @@ -47,6 +47,7 @@
  import sys
@@ -1320,7 +1307,7 @@ Index: gui/wxpython/gui_core/gselect.py
                  optList.append('%s=%s' % (k, v))
 Index: gui/wxpython/gui_core/mapdisp.py
 ===================================================================
---- gui/wxpython/gui_core/mapdisp.py	(revision 72985)
+--- gui/wxpython/gui_core/mapdisp.py	(revision 73002)
 +++ gui/wxpython/gui_core/mapdisp.py	(working copy)
 @@ -21,6 +21,7 @@
  
@@ -1341,7 +1328,7 @@ Index: gui/wxpython/gui_core/mapdisp.py
      def IsStandalone(self):
 Index: gui/wxpython/gui_core/menu.py
 ===================================================================
---- gui/wxpython/gui_core/menu.py	(revision 72985)
+--- gui/wxpython/gui_core/menu.py	(revision 73002)
 +++ gui/wxpython/gui_core/menu.py	(working copy)
 @@ -149,7 +149,7 @@
  
@@ -1354,7 +1341,7 @@ Index: gui/wxpython/gui_core/menu.py
  #        self._dataBox = wx.StaticBox(parent = self, id = wx.ID_ANY,
 Index: gui/wxpython/gui_core/query.py
 ===================================================================
---- gui/wxpython/gui_core/query.py	(revision 72985)
+--- gui/wxpython/gui_core/query.py	(revision 73002)
 +++ gui/wxpython/gui_core/query.py	(working copy)
 @@ -15,6 +15,7 @@
  """
@@ -1375,7 +1362,7 @@ Index: gui/wxpython/gui_core/query.py
              if isinstance(v, dict):
 Index: gui/wxpython/gui_core/toolbars.py
 ===================================================================
---- gui/wxpython/gui_core/toolbars.py	(revision 72985)
+--- gui/wxpython/gui_core/toolbars.py	(revision 73002)
 +++ gui/wxpython/gui_core/toolbars.py	(working copy)
 @@ -27,7 +27,7 @@
  from icons.icon import MetaIcon
@@ -1400,7 +1387,7 @@ Index: gui/wxpython/gui_core/toolbars.py
  
 Index: gui/wxpython/gui_core/widgets.py
 ===================================================================
---- gui/wxpython/gui_core/widgets.py	(revision 72985)
+--- gui/wxpython/gui_core/widgets.py	(revision 73002)
 +++ gui/wxpython/gui_core/widgets.py	(working copy)
 @@ -48,6 +48,7 @@
  import sys
@@ -1421,7 +1408,7 @@ Index: gui/wxpython/gui_core/widgets.py
                      # escaping characters
 Index: gui/wxpython/gui_core/wrap.py
 ===================================================================
---- gui/wxpython/gui_core/wrap.py	(revision 72985)
+--- gui/wxpython/gui_core/wrap.py	(revision 73002)
 +++ gui/wxpython/gui_core/wrap.py	(working copy)
 @@ -99,6 +99,19 @@
              wx.Button.SetToolTipString(self, tip)
@@ -1465,7 +1452,7 @@ Index: gui/wxpython/gui_core/wrap.py
      over the widget on different platforms/wxpython versions"""
 Index: gui/wxpython/iclass/dialogs.py
 ===================================================================
---- gui/wxpython/iclass/dialogs.py	(revision 72985)
+--- gui/wxpython/iclass/dialogs.py	(revision 73002)
 +++ gui/wxpython/iclass/dialogs.py	(working copy)
 @@ -33,6 +33,7 @@
  from gui_core import gselect
@@ -1490,7 +1477,7 @@ Index: gui/wxpython/iclass/dialogs.py
          dataSizer.Add(self.withTableCtrl,
 Index: gui/wxpython/iclass/frame.py
 ===================================================================
---- gui/wxpython/iclass/frame.py	(revision 72985)
+--- gui/wxpython/iclass/frame.py	(revision 73002)
 +++ gui/wxpython/iclass/frame.py	(working copy)
 @@ -19,6 +19,7 @@
  
@@ -1511,7 +1498,7 @@ Index: gui/wxpython/iclass/frame.py
          return None
 Index: gui/wxpython/iclass/statistics.py
 ===================================================================
---- gui/wxpython/iclass/statistics.py	(revision 72985)
+--- gui/wxpython/iclass/statistics.py	(revision 73002)
 +++ gui/wxpython/iclass/statistics.py	(working copy)
 @@ -18,6 +18,7 @@
  """
@@ -1532,7 +1519,7 @@ Index: gui/wxpython/iclass/statistics.py
          self.statisticsSet.emit(stats=stats)
 Index: gui/wxpython/icons/icon.py
 ===================================================================
---- gui/wxpython/icons/icon.py	(revision 72985)
+--- gui/wxpython/icons/icon.py	(revision 73002)
 +++ gui/wxpython/icons/icon.py	(working copy)
 @@ -18,6 +18,7 @@
  import os
@@ -1567,7 +1554,7 @@ Index: gui/wxpython/icons/icon.py
              iconSet[key] = img
 Index: gui/wxpython/image2target/ii2t_manager.py
 ===================================================================
---- gui/wxpython/image2target/ii2t_manager.py	(revision 72985)
+--- gui/wxpython/image2target/ii2t_manager.py	(revision 73002)
 +++ gui/wxpython/image2target/ii2t_manager.py	(working copy)
 @@ -35,6 +35,7 @@
  
@@ -1623,7 +1610,7 @@ Index: gui/wxpython/image2target/ii2t_manager.py
          btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 Index: gui/wxpython/iscatt/controllers.py
 ===================================================================
---- gui/wxpython/iscatt/controllers.py	(revision 72985)
+--- gui/wxpython/iscatt/controllers.py	(revision 73002)
 +++ gui/wxpython/iscatt/controllers.py	(working copy)
 @@ -23,6 +23,7 @@
  import sys
@@ -1698,7 +1685,7 @@ Index: gui/wxpython/iscatt/controllers.py
              cat_name = self.cats_mgr.GetCategoryAttrs(cat_id)['name']
 Index: gui/wxpython/iscatt/core_c.py
 ===================================================================
---- gui/wxpython/iscatt/core_c.py	(revision 72985)
+--- gui/wxpython/iscatt/core_c.py	(revision 73002)
 +++ gui/wxpython/iscatt/core_c.py	(working copy)
 @@ -12,6 +12,7 @@
  """
@@ -1749,7 +1736,7 @@ Index: gui/wxpython/iscatt/core_c.py
              vals = dt['np_vals']
 Index: gui/wxpython/iscatt/dialogs.py
 ===================================================================
---- gui/wxpython/iscatt/dialogs.py	(revision 72985)
+--- gui/wxpython/iscatt/dialogs.py	(revision 73002)
 +++ gui/wxpython/iscatt/dialogs.py	(working copy)
 @@ -19,6 +19,7 @@
  """
@@ -1833,7 +1820,7 @@ Index: gui/wxpython/iscatt/dialogs.py
                  group='scatt', key=sett[0], subkey=settKey)
 Index: gui/wxpython/iscatt/frame.py
 ===================================================================
---- gui/wxpython/iscatt/frame.py	(revision 72985)
+--- gui/wxpython/iscatt/frame.py	(revision 73002)
 +++ gui/wxpython/iscatt/frame.py	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -1854,7 +1841,7 @@ Index: gui/wxpython/iscatt/frame.py
      def CursorPlotMove(self, x, y, scatt_id):
 Index: gui/wxpython/iscatt/iscatt_core.py
 ===================================================================
---- gui/wxpython/iscatt/iscatt_core.py	(revision 72985)
+--- gui/wxpython/iscatt/iscatt_core.py	(revision 73002)
 +++ gui/wxpython/iscatt/iscatt_core.py	(working copy)
 @@ -19,6 +19,7 @@
  """
@@ -1977,7 +1964,7 @@ Index: gui/wxpython/iscatt/iscatt_core.py
          return cats_rasts
 Index: gui/wxpython/iscatt/plots.py
 ===================================================================
---- gui/wxpython/iscatt/plots.py	(revision 72985)
+--- gui/wxpython/iscatt/plots.py	(revision 73002)
 +++ gui/wxpython/iscatt/plots.py	(working copy)
 @@ -16,6 +16,7 @@
  @author Stepan Turek <stepan.turek seznam.cz> (mentor: Martin Landa)
@@ -2007,7 +1994,7 @@ Index: gui/wxpython/iscatt/plots.py
              del rend_dt[k]['sh']
 Index: gui/wxpython/location_wizard/base.py
 ===================================================================
---- gui/wxpython/location_wizard/base.py	(revision 72985)
+--- gui/wxpython/location_wizard/base.py	(revision 73002)
 +++ gui/wxpython/location_wizard/base.py	(working copy)
 @@ -17,6 +17,7 @@
  """
@@ -2069,7 +2056,7 @@ Index: gui/wxpython/location_wizard/base.py
          return chbox
 Index: gui/wxpython/location_wizard/wizard.py
 ===================================================================
---- gui/wxpython/location_wizard/wizard.py	(revision 72985)
+--- gui/wxpython/location_wizard/wizard.py	(revision 73002)
 +++ gui/wxpython/location_wizard/wizard.py	(working copy)
 @@ -35,6 +35,7 @@
  import os
@@ -2179,7 +2166,7 @@ Index: gui/wxpython/location_wizard/wizard.py
  
 Index: gui/wxpython/mapdisp/main.py
 ===================================================================
---- gui/wxpython/mapdisp/main.py	(revision 72985)
+--- gui/wxpython/mapdisp/main.py	(revision 73002)
 +++ gui/wxpython/mapdisp/main.py	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -2200,7 +2187,7 @@ Index: gui/wxpython/mapdisp/main.py
      def watcher(self):
 Index: gui/wxpython/mapdisp/statusbar.py
 ===================================================================
---- gui/wxpython/mapdisp/statusbar.py	(revision 72985)
+--- gui/wxpython/mapdisp/statusbar.py	(revision 73002)
 +++ gui/wxpython/mapdisp/statusbar.py	(working copy)
 @@ -44,7 +44,7 @@
  from grass.pydispatch.signal import Signal
@@ -2213,7 +2200,7 @@ Index: gui/wxpython/mapdisp/statusbar.py
      def __init__(self, message):
 Index: gui/wxpython/mapdisp/test_mapdisp.py
 ===================================================================
---- gui/wxpython/mapdisp/test_mapdisp.py	(revision 72985)
+--- gui/wxpython/mapdisp/test_mapdisp.py	(revision 73002)
 +++ gui/wxpython/mapdisp/test_mapdisp.py	(working copy)
 @@ -1,4 +1,4 @@
 -#!/usr/bin/env python
@@ -2223,7 +2210,7 @@ Index: gui/wxpython/mapdisp/test_mapdisp.py
  #
 Index: gui/wxpython/mapswipe/mapwindow.py
 ===================================================================
---- gui/wxpython/mapswipe/mapwindow.py	(revision 72985)
+--- gui/wxpython/mapswipe/mapwindow.py	(revision 73002)
 +++ gui/wxpython/mapswipe/mapwindow.py	(working copy)
 @@ -52,8 +52,8 @@
  
@@ -2238,7 +2225,7 @@ Index: gui/wxpython/mapswipe/mapwindow.py
          self.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
 Index: gui/wxpython/mapwin/base.py
 ===================================================================
---- gui/wxpython/mapwin/base.py	(revision 72985)
+--- gui/wxpython/mapwin/base.py	(revision 73002)
 +++ gui/wxpython/mapwin/base.py	(working copy)
 @@ -20,6 +20,7 @@
  """
@@ -2286,7 +2273,7 @@ Index: gui/wxpython/mapwin/base.py
              try:
 Index: gui/wxpython/mapwin/buffered.py
 ===================================================================
---- gui/wxpython/mapwin/buffered.py	(revision 72985)
+--- gui/wxpython/mapwin/buffered.py	(revision 73002)
 +++ gui/wxpython/mapwin/buffered.py	(working copy)
 @@ -807,7 +807,7 @@
          else:
@@ -2299,7 +2286,7 @@ Index: gui/wxpython/mapwin/buffered.py
  
 Index: gui/wxpython/modules/colorrules.py
 ===================================================================
---- gui/wxpython/modules/colorrules.py	(revision 72985)
+--- gui/wxpython/modules/colorrules.py	(revision 73002)
 +++ gui/wxpython/modules/colorrules.py	(working copy)
 @@ -26,6 +26,7 @@
  import shutil
@@ -2388,7 +2375,7 @@ Index: gui/wxpython/modules/colorrules.py
  
 Index: gui/wxpython/modules/extensions.py
 ===================================================================
---- gui/wxpython/modules/extensions.py	(revision 72985)
+--- gui/wxpython/modules/extensions.py	(revision 73002)
 +++ gui/wxpython/modules/extensions.py	(working copy)
 @@ -33,6 +33,7 @@
  from gui_core.widgets import GListCtrl, SearchModuleWidget
@@ -2451,7 +2438,7 @@ Index: gui/wxpython/modules/extensions.py
          self.btnClose = wx.Button(parent=self.panel, id=wx.ID_CLOSE)
 Index: gui/wxpython/modules/vclean.py
 ===================================================================
---- gui/wxpython/modules/vclean.py	(revision 72985)
+--- gui/wxpython/modules/vclean.py	(revision 73002)
 +++ gui/wxpython/modules/vclean.py	(working copy)
 @@ -25,6 +25,7 @@
  from gui_core.gselect import Select
@@ -2500,7 +2487,7 @@ Index: gui/wxpython/modules/vclean.py
          self.btn_close.Bind(wx.EVT_BUTTON, self.OnClose)
 Index: gui/wxpython/nviz/mapwindow.py
 ===================================================================
---- gui/wxpython/nviz/mapwindow.py	(revision 72985)
+--- gui/wxpython/nviz/mapwindow.py	(revision 73002)
 +++ gui/wxpython/nviz/mapwindow.py	(working copy)
 @@ -20,6 +20,7 @@
  
@@ -2521,7 +2508,7 @@ Index: gui/wxpython/nviz/mapwindow.py
              if oid not in [t.GetId() for t in self.imagelist]:  # new
 Index: gui/wxpython/nviz/preferences.py
 ===================================================================
---- gui/wxpython/nviz/preferences.py	(revision 72985)
+--- gui/wxpython/nviz/preferences.py	(revision 73002)
 +++ gui/wxpython/nviz/preferences.py	(working copy)
 @@ -26,7 +26,7 @@
  from core.settings import UserSettings
@@ -2554,7 +2541,7 @@ Index: gui/wxpython/nviz/preferences.py
          autosize.SetValue(UserSettings.Get(group='nviz', key='vector',
 Index: gui/wxpython/nviz/tools.py
 ===================================================================
---- gui/wxpython/nviz/tools.py	(revision 72985)
+--- gui/wxpython/nviz/tools.py	(revision 73002)
 +++ gui/wxpython/nviz/tools.py	(working copy)
 @@ -23,6 +23,7 @@
  import sys
@@ -2569,7 +2556,7 @@ Index: gui/wxpython/nviz/tools.py
  from gui_core.widgets import ScrolledPanel, NumTextCtrl, FloatSlider, SymbolButton
  from gui_core.gselect import Select
 -from gui_core.wrap import SpinCtrl, PseudoDC
-+from gui_core.wrap import SpinCtrl, PseudoDC, ToggleButton, Button \
++from gui_core.wrap import SpinCtrl, PseudoDC, ToggleButton, Button, \
 +    TextCtrl
  from core.debug import Debug
  try:
@@ -2804,7 +2791,7 @@ Index: gui/wxpython/nviz/tools.py
  
 Index: gui/wxpython/nviz/workspace.py
 ===================================================================
---- gui/wxpython/nviz/workspace.py	(revision 72985)
+--- gui/wxpython/nviz/workspace.py	(revision 73002)
 +++ gui/wxpython/nviz/workspace.py	(working copy)
 @@ -15,6 +15,7 @@
  """
@@ -2887,7 +2874,7 @@ Index: gui/wxpython/nviz/workspace.py
  
 Index: gui/wxpython/photo2image/ip2i_manager.py
 ===================================================================
---- gui/wxpython/photo2image/ip2i_manager.py	(revision 72985)
+--- gui/wxpython/photo2image/ip2i_manager.py	(revision 73002)
 +++ gui/wxpython/photo2image/ip2i_manager.py	(working copy)
 @@ -28,6 +28,7 @@
  
@@ -2943,7 +2930,7 @@ Index: gui/wxpython/photo2image/ip2i_manager.py
          btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 Index: gui/wxpython/psmap/dialogs.py
 ===================================================================
---- gui/wxpython/psmap/dialogs.py	(revision 72985)
+--- gui/wxpython/psmap/dialogs.py	(revision 73002)
 +++ gui/wxpython/psmap/dialogs.py	(working copy)
 @@ -70,7 +70,7 @@
  from gui_core.gselect import Select
@@ -3058,7 +3045,7 @@ Index: gui/wxpython/psmap/dialogs.py
          choices = [_('default')] + self.unitConv.getMapUnitsNames()
 Index: gui/wxpython/psmap/frame.py
 ===================================================================
---- gui/wxpython/psmap/frame.py	(revision 72985)
+--- gui/wxpython/psmap/frame.py	(revision 73002)
 +++ gui/wxpython/psmap/frame.py	(working copy)
 @@ -17,7 +17,10 @@
  
@@ -3074,7 +3061,7 @@ Index: gui/wxpython/psmap/frame.py
  import wx
 Index: gui/wxpython/psmap/instructions.py
 ===================================================================
---- gui/wxpython/psmap/instructions.py	(revision 72985)
+--- gui/wxpython/psmap/instructions.py	(revision 73002)
 +++ gui/wxpython/psmap/instructions.py	(working copy)
 @@ -34,6 +34,7 @@
  
@@ -3097,7 +3084,7 @@ Index: gui/wxpython/psmap/instructions.py
                          except KeyError:
 Index: gui/wxpython/psmap/utils.py
 ===================================================================
---- gui/wxpython/psmap/utils.py	(revision 72985)
+--- gui/wxpython/psmap/utils.py	(revision 73002)
 +++ gui/wxpython/psmap/utils.py	(working copy)
 @@ -385,14 +385,13 @@
      if not portrait:
@@ -3123,7 +3110,7 @@ Index: gui/wxpython/psmap/utils.py
          return None
 Index: gui/wxpython/rdigit/toolbars.py
 ===================================================================
---- gui/wxpython/rdigit/toolbars.py	(revision 72985)
+--- gui/wxpython/rdigit/toolbars.py	(revision 73002)
 +++ gui/wxpython/rdigit/toolbars.py	(working copy)
 @@ -21,6 +21,7 @@
  from icons.icon import MetaIcon
@@ -3151,7 +3138,7 @@ Index: gui/wxpython/rdigit/toolbars.py
          self.InsertControl(8, labelWidth)
 Index: gui/wxpython/rlisetup/frame.py
 ===================================================================
---- gui/wxpython/rlisetup/frame.py	(revision 72985)
+--- gui/wxpython/rlisetup/frame.py	(revision 73002)
 +++ gui/wxpython/rlisetup/frame.py	(working copy)
 @@ -15,6 +15,7 @@
  from rlisetup.wizard import RLIWizard
@@ -3194,7 +3181,7 @@ Index: gui/wxpython/rlisetup/frame.py
          self.btn_help.Bind(wx.EVT_BUTTON, self.OnHelp)
 Index: gui/wxpython/rlisetup/sampling_frame.py
 ===================================================================
---- gui/wxpython/rlisetup/sampling_frame.py	(revision 72985)
+--- gui/wxpython/rlisetup/sampling_frame.py	(revision 73002)
 +++ gui/wxpython/rlisetup/sampling_frame.py	(working copy)
 @@ -47,7 +47,7 @@
  from grass.pydispatch.signal import Signal
@@ -3207,7 +3194,7 @@ Index: gui/wxpython/rlisetup/sampling_frame.py
  class Circle:
 Index: gui/wxpython/timeline/frame.py
 ===================================================================
---- gui/wxpython/timeline/frame.py	(revision 72985)
+--- gui/wxpython/timeline/frame.py	(revision 73002)
 +++ gui/wxpython/timeline/frame.py	(working copy)
 @@ -17,6 +17,7 @@
  """
@@ -3230,7 +3217,7 @@ Index: gui/wxpython/timeline/frame.py
              allDatasets = reduce(
 Index: gui/wxpython/tools/update_menudata.py
 ===================================================================
---- gui/wxpython/tools/update_menudata.py	(revision 72985)
+--- gui/wxpython/tools/update_menudata.py	(revision 73002)
 +++ gui/wxpython/tools/update_menudata.py	(working copy)
 @@ -151,7 +151,7 @@
          print(sys.stderr, __doc__, file=sys.stderr)
@@ -3243,7 +3230,7 @@ Index: gui/wxpython/tools/update_menudata.py
      grass.info("Step 2: parsing modules...")
 Index: gui/wxpython/tplot/frame.py
 ===================================================================
---- gui/wxpython/tplot/frame.py	(revision 72985)
+--- gui/wxpython/tplot/frame.py	(revision 73002)
 +++ gui/wxpython/tplot/frame.py	(working copy)
 @@ -19,6 +19,7 @@
  @author start stvds support Matej Krejci
@@ -3339,7 +3326,7 @@ Index: gui/wxpython/tplot/frame.py
              text.append(_("Space time raster dataset: %s") % key)
 Index: gui/wxpython/vdigit/dialogs.py
 ===================================================================
---- gui/wxpython/vdigit/dialogs.py	(revision 72985)
+--- gui/wxpython/vdigit/dialogs.py	(revision 73002)
 +++ gui/wxpython/vdigit/dialogs.py	(working copy)
 @@ -20,6 +20,7 @@
  
@@ -3388,7 +3375,7 @@ Index: gui/wxpython/vdigit/dialogs.py
                  for cat in catsCurr[0][layer]:
 Index: gui/wxpython/vdigit/mapwindow.py
 ===================================================================
---- gui/wxpython/vdigit/mapwindow.py	(revision 72985)
+--- gui/wxpython/vdigit/mapwindow.py	(revision 73002)
 +++ gui/wxpython/vdigit/mapwindow.py	(working copy)
 @@ -16,6 +16,7 @@
  
@@ -3412,7 +3399,7 @@ Index: gui/wxpython/vdigit/mapwindow.py
                          val = self.digit.GetLineLength(fid)
 Index: gui/wxpython/vdigit/preferences.py
 ===================================================================
---- gui/wxpython/vdigit/preferences.py	(revision 72985)
+--- gui/wxpython/vdigit/preferences.py	(revision 73002)
 +++ gui/wxpython/vdigit/preferences.py	(working copy)
 @@ -15,6 +15,7 @@
  """
@@ -3451,7 +3438,7 @@ Index: gui/wxpython/vdigit/preferences.py
              unitsIdx = self.FindWindowById(val['units']).GetSelection()
 Index: gui/wxpython/vdigit/wxdigit.py
 ===================================================================
---- gui/wxpython/vdigit/wxdigit.py	(revision 72985)
+--- gui/wxpython/vdigit/wxdigit.py	(revision 73002)
 +++ gui/wxpython/vdigit/wxdigit.py	(working copy)
 @@ -28,6 +28,7 @@
  
@@ -3472,7 +3459,7 @@ Index: gui/wxpython/vdigit/wxdigit.py
              Debug.msg(
 Index: gui/wxpython/vdigit/wxdisplay.py
 ===================================================================
---- gui/wxpython/vdigit/wxdisplay.py	(revision 72985)
+--- gui/wxpython/vdigit/wxdisplay.py	(revision 73002)
 +++ gui/wxpython/vdigit/wxdisplay.py	(working copy)
 @@ -20,6 +20,7 @@
  from __future__ import print_function
@@ -3493,7 +3480,7 @@ Index: gui/wxpython/vdigit/wxdisplay.py
          return catsStr
 Index: gui/wxpython/vnet/dialogs.py
 ===================================================================
---- gui/wxpython/vnet/dialogs.py	(revision 72985)
+--- gui/wxpython/vnet/dialogs.py	(revision 73002)
 +++ gui/wxpython/vnet/dialogs.py	(working copy)
 @@ -27,6 +27,7 @@
  import os
@@ -3635,7 +3622,7 @@ Index: gui/wxpython/vnet/dialogs.py
          return params
 Index: gui/wxpython/vnet/vnet_core.py
 ===================================================================
---- gui/wxpython/vnet/vnet_core.py	(revision 72985)
+--- gui/wxpython/vnet/vnet_core.py	(revision 73002)
 +++ gui/wxpython/vnet/vnet_core.py	(working copy)
 @@ -20,6 +20,7 @@
  """
@@ -3721,7 +3708,7 @@ Index: gui/wxpython/vnet/vnet_core.py
                      inpMap = VectMap(self, value)
 Index: gui/wxpython/vnet/vnet_data.py
 ===================================================================
---- gui/wxpython/vnet/vnet_data.py	(revision 72985)
+--- gui/wxpython/vnet/vnet_data.py	(revision 73002)
 +++ gui/wxpython/vnet/vnet_data.py	(working copy)
 @@ -24,6 +24,7 @@
  """
@@ -3812,7 +3799,7 @@ Index: gui/wxpython/vnet/vnet_data.py
              else:
 Index: gui/wxpython/vnet/widgets.py
 ===================================================================
---- gui/wxpython/vnet/widgets.py	(revision 72985)
+--- gui/wxpython/vnet/widgets.py	(revision 73002)
 +++ gui/wxpython/vnet/widgets.py	(working copy)
 @@ -19,7 +19,7 @@
  """
@@ -3843,7 +3830,7 @@ Index: gui/wxpython/vnet/widgets.py
  
 Index: gui/wxpython/web_services/dialogs.py
 ===================================================================
---- gui/wxpython/web_services/dialogs.py	(revision 72985)
+--- gui/wxpython/web_services/dialogs.py	(revision 73002)
 +++ gui/wxpython/web_services/dialogs.py	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -3951,7 +3938,7 @@ Index: gui/wxpython/web_services/dialogs.py
          return conn
 Index: gui/wxpython/web_services/widgets.py
 ===================================================================
---- gui/wxpython/web_services/widgets.py	(revision 72985)
+--- gui/wxpython/web_services/widgets.py	(revision 73002)
 +++ gui/wxpython/web_services/widgets.py	(working copy)
 @@ -18,6 +18,7 @@
  
@@ -3992,7 +3979,7 @@ Index: gui/wxpython/web_services/widgets.py
                  GMessage(parent=self,
 Index: gui/wxpython/wxplot/base.py
 ===================================================================
---- gui/wxpython/wxplot/base.py	(revision 72985)
+--- gui/wxpython/wxplot/base.py	(revision 73002)
 +++ gui/wxpython/wxplot/base.py	(working copy)
 @@ -17,6 +17,7 @@
  
@@ -4013,7 +4000,7 @@ Index: gui/wxpython/wxplot/base.py
              r = grass.named_colors[clr][0] * 255
 Index: gui/wxpython/wxplot/dialogs.py
 ===================================================================
---- gui/wxpython/wxplot/dialogs.py	(revision 72985)
+--- gui/wxpython/wxplot/dialogs.py	(revision 73002)
 +++ gui/wxpython/wxplot/dialogs.py	(working copy)
 @@ -30,7 +30,7 @@
  from core.globalvar import ICONDIR
@@ -4107,7 +4094,7 @@ Index: gui/wxpython/wxplot/dialogs.py
          btnStdSizer = wx.StdDialogButtonSizer()
 Index: gui/wxpython/wxplot/profile.py
 ===================================================================
---- gui/wxpython/wxplot/profile.py	(revision 72985)
+--- gui/wxpython/wxplot/profile.py	(revision 73002)
 +++ gui/wxpython/wxplot/profile.py	(working copy)
 @@ -17,6 +17,7 @@
  
