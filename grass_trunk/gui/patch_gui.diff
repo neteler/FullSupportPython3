@@ -553,11 +553,13 @@ Index: gui/wxpython/animation/mapwindow.py
 ===================================================================
 --- gui/wxpython/animation/mapwindow.py	(revision 73002)
 +++ gui/wxpython/animation/mapwindow.py	(working copy)
-@@ -18,7 +18,7 @@
+@@ -17,8 +17,8 @@
+ 
  import wx
  from core.debug import Debug
- from gui_core.wrap import PseudoDC, EmptyBitmap
+-from gui_core.wrap import PseudoDC, EmptyBitmap
 -from utils import ComputeScaledRect
++from gui_core.wrap import PseudoDC, EmptyBitmap, Rect
 +from .utils import ComputeScaledRect
  
  
@@ -573,6 +575,15 @@ Index: gui/wxpython/animation/mapwindow.py
          # OnSize called to make sure the buffer is initialized.
          # This might result in OnSize getting called twice on some
          # platforms at initialization, but little harm done.
+@@ -177,7 +177,7 @@
+         self._pdc.BeginDrawing()
+         self._pdc.SetId(1)
+         self._pdc.DrawBitmap(bmp=self._overlay, x=x, y=y)
+-        self._pdc.SetIdBounds(1, wx.Rect(x, y, self._overlay.GetWidth(),
++        self._pdc.SetIdBounds(1, Rect(x, y, self._overlay.GetWidth(),
+                                          self._overlay.GetHeight()))
+         self._pdc.EndDrawing()
+ 
 Index: gui/wxpython/animation/utils.py
 ===================================================================
 --- gui/wxpython/animation/utils.py	(revision 73002)
@@ -1053,6 +1064,28 @@ Index: gui/wxpython/datacatalog/toolbars.py
          self.AddControl(self.filter)
          help = _("Type to search database by map type or name. "
                   "Use prefix 'r:', 'v:' and 'r3:'"
+Index: gui/wxpython/datacatalog/tree.py
+===================================================================
+--- gui/wxpython/datacatalog/tree.py	(revision 73002)
++++ gui/wxpython/datacatalog/tree.py	(working copy)
+@@ -1009,7 +1009,7 @@
+ 
+     def _popupMenuMapset(self):
+         """Create popup menu for mapsets"""
+-        menu = wx.Menu()
++        menu = Menu()
+         genv = gisenv()
+         currentLocation, currentMapset = self._isCurrent(genv)
+ 
+@@ -1030,7 +1030,7 @@
+ 
+     def _popupMenuElement(self):
+         """Create popup menu for elements"""
+-        menu = wx.Menu()
++        menu = Menu()
+         item = wx.MenuItem(menu, wx.NewId(), _("&Paste"))
+         menu.AppendItem(item)
+         self.Bind(wx.EVT_MENU, self.OnPasteMap, item)
 Index: gui/wxpython/dbmgr/base.py
 ===================================================================
 --- gui/wxpython/dbmgr/base.py	(revision 73002)
@@ -1063,10 +1096,28 @@ Index: gui/wxpython/dbmgr/base.py
  from core.settings import UserSettings
 -from gui_core.wrap import SpinCtrl, Button, TextCtrl, ListCtrl, CheckBox
 +from gui_core.wrap import SpinCtrl, Button, TextCtrl, ListCtrl, CheckBox, \
-+    StaticText, StaticBox
++    StaticText, StaticBox, Menu
  
  
  class Log:
+@@ -431,7 +432,7 @@
+         """Column heading right mouse button -> pop-up menu"""
+         self._col = event.GetColumn()
+ 
+-        popupMenu = wx.Menu()
++        popupMenu = Menu()
+ 
+         if not hasattr(self, "popupID"):
+             self.popupId = {'sortAsc': wx.NewId(),
+@@ -452,7 +453,7 @@
+         popupMenu.Append(self.popupId['sortAsc'], text=_("Sort ascending"))
+         popupMenu.Append(self.popupId['sortDesc'], text=_("Sort descending"))
+         popupMenu.AppendSeparator()
+-        subMenu = wx.Menu()
++        subMenu = Menu()
+         popupMenu.AppendMenu(self.popupId['calculate'], _(
+             "Calculate (only numeric columns)"), subMenu)
+         popupMenu.Append(
 @@ -1119,7 +1120,7 @@
          #   controls that are placed IN the wx.StaticBox, or it will freeze
          #   on the Mac
@@ -1105,6 +1156,15 @@ Index: gui/wxpython/dbmgr/base.py
              parent=advancedSqlPanel,
              id=wx.ID_ANY,
              label=_("SQL Builder"))
+@@ -1404,7 +1405,7 @@
+ 
+         tlist = self.FindWindowById(self.layerPage[self.selLayer]['data'])
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupDataID1, _("Edit selected record"))
+         selected = tlist.GetFirstSelected()
+         if not self.dbMgrData[
 @@ -2274,8 +2275,8 @@
          #
          # dbInfo
@@ -1221,6 +1281,15 @@ Index: gui/wxpython/dbmgr/base.py
              parent=panel,
              id=wx.ID_ANY,
              label=_("&Rename"))
+@@ -2580,7 +2581,7 @@
+             self.Bind(wx.EVT_MENU, self.OnTableReload, id=self.popupTableID3)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupTableID1, _("Drop selected column"))
+         if self.FindWindowById(self.layerPage[self.selLayer][
+                                'tableData']).GetFirstSelected() == -1:
 @@ -2766,8 +2767,8 @@
          panelList = wx.Panel(parent=splitterWin, id=wx.ID_ANY)
  
@@ -1940,7 +2009,7 @@ Index: gui/wxpython/gcp/manager.py
  from core.giface import Notification
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, StaticText, StaticBox, \
-+    CheckListBox, TextCtrl
++    CheckListBox, TextCtrl, Menu
  
  from location_wizard.wizard import TitledPage as TitledPage
  
@@ -2048,6 +2117,15 @@ Index: gui/wxpython/gcp/manager.py
              col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
              self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
                  col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+@@ -2062,7 +2064,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomsource = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 @@ -2389,9 +2391,9 @@
          #
          # buttons
@@ -2291,6 +2369,36 @@ Index: gui/wxpython/gcp/manager.py
              parent=panel, id=wx.ID_ANY, value="", size=(
                  350, -1))
          self.ext_txt.SetValue(self.parent.extension)
+Index: gui/wxpython/gcp/mapdisplay.py
+===================================================================
+--- gui/wxpython/gcp/mapdisplay.py	(revision 73002)
++++ gui/wxpython/gcp/mapdisplay.py	(working copy)
+@@ -30,6 +30,7 @@
+ from core.utils import _
+ from gui_core.dialogs import GetImageHandlers, ImageSizeDialog
+ from gui_core.mapdisp import SingleMapFrame
++from gui_core.wrap import Menu
+ from core.settings import UserSettings
+ from mapwin.buffered import BufferedMapWindow
+ from mapwin.base import MapWindowProperties
+@@ -421,7 +422,7 @@
+         Print options and output menu for map display
+         """
+         point = wx.GetMousePosition()
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         # Add items to the menu
+         setup = wx.MenuItem(printmenu, wx.ID_ANY, _('Page setup'))
+         printmenu.AppendItem(setup)
+@@ -467,7 +468,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomwind = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 Index: gui/wxpython/gis_set.py
 ===================================================================
 --- gui/wxpython/gis_set.py	(revision 73002)
@@ -2358,15 +2466,16 @@ Index: gui/wxpython/gmodeler/dialogs.py
  
  import wx
  import wx.lib.mixins.listctrl as listmix
-@@ -39,6 +40,7 @@
+@@ -39,6 +40,8 @@
  from gui_core.gselect import Select, ElementSelect
  from gmodeler.model import *
  from lmgr.menudata import LayerManagerMenuData
-+from gui_core.wrap import Button, StaticText, StaticBox, TextCtrl
++from gui_core.wrap import Button, StaticText, StaticBox, TextCtrl, \
++    Menu
  
  from grass.script import task as gtask
  
-@@ -99,7 +101,7 @@
+@@ -99,7 +102,7 @@
          """Do layout"""
          if self.etype:
              self.dataSizer.Add(
@@ -2375,7 +2484,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                      parent=self.panel,
                      id=wx.ID_ANY,
                      label=_("Type of element:")),
-@@ -108,8 +110,8 @@
+@@ -108,8 +111,8 @@
                  border=1)
              self.dataSizer.Add(self.typeSelect,
                                 proportion=0, flag=wx.ALL, border=1)
@@ -2386,7 +2495,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                             proportion=0, flag=wx.ALL, border=1)
          self.dataSizer.Add(self.element, proportion=0,
                             flag=wx.EXPAND | wx.ALL, border=1)
-@@ -188,10 +190,10 @@
+@@ -188,10 +191,10 @@
          self._command = None
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
  
@@ -2401,7 +2510,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
  
          # menu data for search widget and prompt
          menuModel = LayerManagerMenuData()
-@@ -208,14 +210,14 @@
+@@ -208,14 +211,14 @@
              lambda name: self.cmd_prompt.SetTextAndFocus(name + ' '))
          wx.CallAfter(self.cmd_prompt.SetFocus)
  
@@ -2420,7 +2529,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
          self.btnOk.SetDefault()
  
          self.Bind(wx.EVT_BUTTON, self.OnOk, self.btnOk)
-@@ -231,12 +233,12 @@
+@@ -231,12 +234,12 @@
                       flag=wx.EXPAND)
          labelSizer = wx.StaticBoxSizer(self.labelBox, wx.VERTICAL)
          gridSizer = wx.GridBagSizer(hgap=5, vgap=5)
@@ -2437,7 +2546,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                        flag=wx.ALIGN_CENTER_VERTICAL, pos=(1, 0))
          gridSizer.Add(self.comment, pos=(1, 1), flag=wx.EXPAND)
          gridSizer.AddGrowableRow(1)
-@@ -353,10 +355,10 @@
+@@ -353,10 +356,10 @@
  
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
  
@@ -2452,7 +2561,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
  
          self.option = wx.ComboBox(parent=self.panel, id=wx.ID_ANY,
                                    style=wx.CB_READONLY,
-@@ -363,8 +365,8 @@
+@@ -363,8 +366,8 @@
                                    choices=options)
          self.option.Bind(wx.EVT_COMBOBOX, self.OnOption)
  
@@ -2463,7 +2572,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
          self.btnOk.Enable(False)
  
          self._layout()
-@@ -397,20 +399,20 @@
+@@ -397,20 +400,20 @@
  
      def _layoutShape(self, shape, sizer):
          if isinstance(shape, ModelData):
@@ -2492,7 +2601,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                            flag=wx.ALIGN_CENTER_VERTICAL,
                            pos=(1, 0))
              gridSizer.Add(self.option,
-@@ -483,10 +485,10 @@
+@@ -483,10 +486,10 @@
  
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
  
@@ -2507,7 +2616,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
  
          self.itemList = ItemCheckListCtrl(parent=self.panel,
                                            columns=[_("Label"),
-@@ -496,8 +498,8 @@
+@@ -496,8 +499,8 @@
  
          self.itemList.Populate(self.parent.GetModel().GetItems())
  
@@ -2518,7 +2627,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
          self.btnOk.SetDefault()
  
      def _layout(self):
-@@ -517,12 +519,12 @@
+@@ -517,12 +520,12 @@
          ModelItemDialog.__init__(self, parent, shape, title,
                                   style=style, **kwargs)
  
@@ -2535,7 +2644,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              _("Define map series as condition for the loop"))
          self.btnSeries.Bind(wx.EVT_BUTTON, self.OnSeries)
  
-@@ -591,13 +593,13 @@
+@@ -591,13 +594,13 @@
          ModelItemDialog.__init__(self, parent, shape, title,
                                   style=style, **kwargs)
  
@@ -2551,7 +2660,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              parent=self.panel, id=wx.ID_ANY, label=" %s " %
              _("List of items in 'else' block"))
          self.itemListElse = ItemCheckListCtrl(parent=self.panel,
-@@ -743,7 +745,7 @@
+@@ -743,7 +746,7 @@
          """Populate the list"""
          self.itemDataMap = dict()
          i = 0
@@ -2560,7 +2669,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              self.itemDataMap[i] = [name, values['type'],
                                     values.get('value', ''),
                                     values.get('description', '')]
-@@ -752,7 +754,7 @@
+@@ -752,7 +755,7 @@
          self.itemCount = len(self.itemDataMap.keys())
          self.DeleteAllItems()
          i = 0
@@ -2569,7 +2678,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
              index = self.InsertStringItem(i, name)
              self.SetStringItem(index, 0, name)
              self.SetStringItem(index, 1, vtype)
-@@ -767,7 +769,7 @@
+@@ -767,7 +770,7 @@
          :return: None on success
          :return: error string
          """
@@ -2578,7 +2687,16 @@ Index: gui/wxpython/gmodeler/dialogs.py
              if iname == name:
                  return _("Variable <%s> already exists in the model. "
                           "Adding variable failed.") % name
-@@ -937,7 +939,7 @@
+@@ -840,7 +843,7 @@
+             self.Bind(wx.EVT_MENU, self.OnReload, id=self.popupID3)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupID1, _("Delete selected"))
+         menu.Append(self.popupID2, _("Delete all"))
+         if self.GetFirstSelected() == -1:
+@@ -937,7 +940,7 @@
          self.DeleteAllItems()
          i = 0
          if len(self.columns) == 2:
@@ -2587,7 +2705,7 @@ Index: gui/wxpython/gmodeler/dialogs.py
                  index = self.InsertStringItem(i, str(i))
                  self.SetStringItem(index, 0, name)
                  self.SetStringItem(index, 1, desc)
-@@ -946,7 +948,7 @@
+@@ -946,7 +949,7 @@
                      self.CheckItem(index, True)
                  i += 1
          else:
@@ -2596,6 +2714,15 @@ Index: gui/wxpython/gmodeler/dialogs.py
                  index = self.InsertStringItem(i, str(i))
                  self.SetStringItem(index, 0, name)
                  self.SetStringItem(index, 1, inloop)
+@@ -1009,7 +1012,7 @@
+             self.Bind(wx.EVT_MENU, self.OnReload, id=self.popupID['reload'])
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupID['remove'], _("Delete selected"))
+         if self.GetFirstSelected() == -1:
+             menu.Enable(self.popupID['remove'], False)
 Index: gui/wxpython/gmodeler/frame.py
 ===================================================================
 --- gui/wxpython/gmodeler/frame.py	(revision 73002)
@@ -2608,15 +2735,16 @@ Index: gui/wxpython/gmodeler/frame.py
  
  import wx
  from wx.lib import ogl
-@@ -61,6 +62,7 @@
+@@ -61,6 +62,8 @@
  from gmodeler.giface import GraphicalModelerGrassInterface
  from gmodeler.model import *
  from gmodeler.dialogs import *
-+from gui_core.wrap import Button, StaticText, StaticBox, TextCtrl
++from gui_core.wrap import Button, StaticText, StaticBox, TextCtrl, \
++    Menu
  
  wxModelDone, EVT_MODEL_DONE = NewEvent()
  
-@@ -380,7 +382,7 @@
+@@ -380,7 +383,7 @@
          dlg.Init(properties)
          if dlg.ShowModal() == wx.ID_OK:
              self.ModelChanged()
@@ -2625,7 +2753,16 @@ Index: gui/wxpython/gmodeler/frame.py
                  properties[key] = value
              for action in self.model.GetItems(objType=ModelAction):
                  action.GetTask().set_flag('overwrite', properties['overwrite'])
-@@ -1721,7 +1723,7 @@
+@@ -1495,7 +1498,7 @@
+         shape = self.GetShape()
+         self._onSelectShape(shape)
+ 
+-        popupMenu = wx.Menu()
++        popupMenu = Menu()
+         popupMenu.Append(self.popupID['remove'], text=_('Remove'))
+         self.frame.Bind(wx.EVT_MENU, self.OnRemove, id=self.popupID['remove'])
+         if isinstance(shape, ModelAction) or isinstance(shape, ModelLoop):
+@@ -1721,7 +1724,7 @@
  
          wx.Panel.__init__(self, parent=parent, id=id, **kwargs)
  
@@ -2634,7 +2771,7 @@ Index: gui/wxpython/gmodeler/frame.py
              parent=self, id=wx.ID_ANY, label=" %s " %
              _("List of variables - right-click to delete"))
  
-@@ -1735,9 +1737,9 @@
+@@ -1735,9 +1738,9 @@
              frame=self.parent)
  
          # add new category
@@ -2647,7 +2784,7 @@ Index: gui/wxpython/gmodeler/frame.py
          wx.CallAfter(self.name.SetFocus)
          self.type = wx.Choice(parent=self, id=wx.ID_ANY,
                                choices=[_("integer"),
-@@ -1750,12 +1752,12 @@
+@@ -1750,12 +1753,12 @@
                                         _("file"),
                                         _("dir")])
          self.type.SetSelection(2)  # string
@@ -2664,7 +2801,7 @@ Index: gui/wxpython/gmodeler/frame.py
          self.btnAdd.Enable(False)
  
          # bindings
-@@ -1774,28 +1776,28 @@
+@@ -1774,28 +1777,28 @@
  
          addSizer = wx.StaticBoxSizer(self.addBox, wx.VERTICAL)
          gridSizer = wx.GridBagSizer(hgap=5, vgap=5)
@@ -2701,7 +2838,7 @@ Index: gui/wxpython/gmodeler/frame.py
                        flag=wx.ALIGN_CENTER_VERTICAL,
                        pos=(2, 0))
          gridSizer.Add(self.desc,
-@@ -1845,7 +1847,7 @@
+@@ -1845,7 +1848,7 @@
      def UpdateModelVariables(self):
          """Update model variables"""
          variables = dict()
@@ -2710,7 +2847,7 @@ Index: gui/wxpython/gmodeler/frame.py
              name = values[0]
              variables[name] = {'type': str(values[1])}
              if values[2]:
-@@ -1876,7 +1878,7 @@
+@@ -1876,7 +1879,7 @@
  
          wx.Panel.__init__(self, parent=parent, id=id, **kwargs)
  
@@ -2719,7 +2856,7 @@ Index: gui/wxpython/gmodeler/frame.py
              parent=self, id=wx.ID_ANY, label=" %s " %
              _("List of items - right-click to delete"))
  
-@@ -1893,9 +1895,9 @@
+@@ -1893,9 +1896,9 @@
                  3],
              frame=self.parent)
  
@@ -2732,7 +2869,7 @@ Index: gui/wxpython/gmodeler/frame.py
  
          self.btnMoveUp.Bind(wx.EVT_BUTTON, self.OnMoveItemsUp)
          self.btnMoveDown.Bind(wx.EVT_BUTTON, self.OnMoveItemsDown)
-@@ -1976,18 +1978,18 @@
+@@ -1976,18 +1979,18 @@
  
          self.filename = None  # temp file to run
  
@@ -3254,7 +3391,7 @@ Index: gui/wxpython/gui_core/dialogs.py
  from core.debug import Debug
 -from gui_core.wrap import SpinCtrl, TextCtrl
 +from gui_core.wrap import SpinCtrl, TextCtrl, Button, CheckListBox, \
-+    StaticText, StaticBox
++    StaticText, StaticBox, Menu
  
  
  class SimpleDialog(wx.Dialog):
@@ -3581,6 +3718,15 @@ Index: gui/wxpython/gui_core/dialogs.py
          bodySizer.Add(self.layers,
                        flag=wx.EXPAND,
                        pos=(3, 1), span=(1, 2))
+@@ -1574,7 +1576,7 @@
+             self.Bind(wx.EVT_MENU, self.OnDeselectAll, id=self.popupDataID3)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupDataID1, _("Select all"))
+         menu.Append(self.popupDataID2, _("Invert selection"))
+         menu.Append(self.popupDataID3, _("Deselect all"))
 @@ -1676,7 +1678,7 @@
              self, parent=parent, title=title, **kwargs)
  
@@ -5374,7 +5520,7 @@ Index: gui/wxpython/gui_core/query.py
  from core.utils import _
  from core.gcmd import DecodeString
  from gui_core.treeview import TreeListView
-+from gui_core.wrap import Button, StaticText
++from gui_core.wrap import Button, StaticText, Menu
  from core.treemodel import TreeModel, DictNode
  
  from grass.pydispatch.signal import Signal
@@ -5399,6 +5545,15 @@ Index: gui/wxpython/gui_core/query.py
              self.panel,
              id=wx.ID_ANY,
              label=_("Copy all to clipboard"))
+@@ -121,7 +123,7 @@
+         if not nodes:
+             return
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+         texts = []
+         if len(nodes) > 1:
+             values = []
 @@ -217,7 +219,7 @@
      :return: tree model
      """
@@ -5416,7 +5571,7 @@ Index: gui/wxpython/gui_core/simplelmgr.py
  from icons.icon import MetaIcon
  from gui_core.forms import GUI
  from gui_core.dialogs import SetOpacityDialog
-+from gui_core.wrap import CheckListBox
++from gui_core.wrap import CheckListBox, Menu
  from core.utils import GetLayerNameFromCmd
  from core.gcmd import GError
  from core.layerlist import LayerList
@@ -5429,6 +5584,15 @@ Index: gui/wxpython/gui_core/simplelmgr.py
          if not toolbarCls:
              toolbarCls = SimpleLmgrToolbar
          self._toolbar = toolbarCls(self, lmgrStyle=self._style)
+@@ -139,7 +140,7 @@
+             event.Skip()
+             return
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+         llist = [layer.name for layer in self._layerList]
+         texts = [','.join(llist), ','.join(reversed(llist))]
+         labels = [_("Copy map names to clipboard (top to bottom)"),
 Index: gui/wxpython/gui_core/toolbars.py
 ===================================================================
 --- gui/wxpython/gui_core/toolbars.py	(revision 73002)
@@ -5493,10 +5657,19 @@ Index: gui/wxpython/gui_core/widgets.py
  from core.debug import Debug
 -from gui_core.wrap import Button, SearchCtrl
 +from gui_core.wrap import Button, SearchCtrl, StaticText, StaticBox, \
-+    TextCtrl
++    TextCtrl, Menu, Rect
  
  
  class NotebookController:
+@@ -964,7 +966,7 @@
+             self.Bind(wx.EVT_MENU, self.OnSelectNone, id=self.popupDataID2)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupDataID1, _("Select all"))
+         menu.Append(self.popupDataID2, _("Deselect all"))
+ 
 @@ -1072,7 +1074,7 @@
  # label = " %s " % _("Find module - (press Enter for next match)"))
  
@@ -5535,6 +5708,15 @@ Index: gui/wxpython/gui_core/widgets.py
                  first = True
                  for v in values:
                      # escaping characters
+@@ -1542,7 +1544,7 @@
+             # painting the control, but there is no valid item selected yet
+             return
+ 
+-        r = wx.Rect(*rect)  # make a copy
++        r = Rect(*rect)  # make a copy
+         r.Deflate(3, 5)
+ 
+         # for painting the items in the popup
 Index: gui/wxpython/gui_core/wrap.py
 ===================================================================
 --- gui/wxpython/gui_core/wrap.py	(revision 73002)
@@ -5579,6 +5761,46 @@ Index: gui/wxpython/gui_core/wrap.py
  class TextCtrl(wx.TextCtrl):
      """Wrapper around wx.TextCtrl to have more control
      over the widget on different platforms/wxpython versions"""
+Index: gui/wxpython/gui_core/wxlibplot.py
+===================================================================
+--- gui/wxpython/gui_core/wxlibplot.py	(revision 73002)
++++ gui/wxpython/gui_core/wxlibplot.py	(working copy)
+@@ -120,6 +120,8 @@
+ # Needs NumPy
+ import numpy as np
+ 
++from gui_core.wrap import Menu
++
+ from core.globalvar import CheckWxVersion
+ if CheckWxVersion([3, 0, 0]):
+     from wx import PENSTYLE_SOLID
+@@ -2234,7 +2236,7 @@
+         # Now Create the menu bar and items
+         self.mainmenu = wx.MenuBar()
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(200, 'Page Setup...', 'Setup the printer page')
+         self.Bind(wx.EVT_MENU, self.OnFilePageSetup, id=200)
+ 
+@@ -2251,7 +2253,7 @@
+         self.Bind(wx.EVT_MENU, self.OnFileExit, id=205)
+         self.mainmenu.Append(menu, '&File')
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(206, 'Draw1', 'Draw plots1')
+         self.Bind(wx.EVT_MENU, self.OnPlotDraw1, id=206)
+         menu.Append(207, 'Draw2', 'Draw plots2')
+@@ -2324,7 +2326,7 @@
+ 
+         self.mainmenu.Append(menu, '&Plot')
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(300, '&About', 'About this thing...')
+         self.Bind(wx.EVT_MENU, self.OnHelpAbout, id=300)
+         self.mainmenu.Append(menu, '&Help')
 Index: gui/wxpython/iclass/dialogs.py
 ===================================================================
 --- gui/wxpython/iclass/dialogs.py	(revision 73002)
@@ -5588,7 +5810,7 @@ Index: gui/wxpython/iclass/dialogs.py
  from gui_core.widgets import SimpleValidator
  from iclass.statistics import Statistics, BandStatistics
 +from gui_core.wrap import CheckBox, Button, StaticText, \
-+    StaticBox, TextCtrl
++    StaticBox, TextCtrl, Menu
  
  import grass.script as grass
  
@@ -5660,6 +5882,15 @@ Index: gui/wxpython/iclass/dialogs.py
          btnSizer.Add(wx.Size(-1, -1), proportion=1, flag=wx.EXPAND)
          btnSizer.Add(closeButton, proportion=0, flag=wx.ALIGN_RIGHT)
          mainSizer.Add(
+@@ -539,7 +541,7 @@
+                 id=self.popupZoomtoAreas)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(
+             self.popupZoomtoAreas,
+             _("Zoom to training areas of selected class"))
 @@ -631,8 +633,8 @@
                                           'sig')
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
@@ -5753,7 +5984,24 @@ Index: gui/wxpython/iclass/frame.py
  import copy
  import tempfile
  import types
-@@ -1462,7 +1463,7 @@
+@@ -47,6 +48,7 @@
+ from core.render import Map, MapLayer
+ from core.gcmd import RunCommand, GMessage, GError, GWarning
+ from gui_core.dialogs import SetOpacityDialog
++from gui_core.wrap import Menu
+ from mapwin.base import MapWindowProperties
+ from dbmgr.vinfo import VectorDBInfo
+ import grass.script as grass
+@@ -477,7 +479,7 @@
+ 
+     def OnZoomMenu(self, event):
+         """Popup Zoom menu """
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         i = 0
+@@ -1462,7 +1464,7 @@
  
      def GetAlias(self, name):
          """Returns alias for layer"""
@@ -5912,7 +6160,7 @@ Index: gui/wxpython/image2target/ii2t_manager.py
  from core.giface import Notification
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, StaticText, StaticBox, \
-+    CheckListBox, TextCtrl
++    CheckListBox, TextCtrl, Menu
  
  from location_wizard.wizard import TitledPage as TitledPage
  
@@ -6020,6 +6268,15 @@ Index: gui/wxpython/image2target/ii2t_manager.py
              col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
              self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
                  col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+@@ -2126,7 +2128,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomsource = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 @@ -2461,17 +2463,17 @@
          #
          # buttons
@@ -6268,6 +6525,36 @@ Index: gui/wxpython/image2target/ii2t_manager.py
              parent=panel, id=wx.ID_ANY, value="", size=(
                  350, -1))
          self.ext_txt.SetValue(self.parent.extension)
+Index: gui/wxpython/image2target/ii2t_mapdisplay.py
+===================================================================
+--- gui/wxpython/image2target/ii2t_mapdisplay.py	(revision 73002)
++++ gui/wxpython/image2target/ii2t_mapdisplay.py	(working copy)
+@@ -30,6 +30,7 @@
+ from core.utils import _
+ from gui_core.dialogs import GetImageHandlers, ImageSizeDialog
+ from gui_core.mapdisp import SingleMapFrame
++from gui_core.wrap import Menu
+ from core.settings import UserSettings
+ from mapwin.buffered import BufferedMapWindow
+ from mapwin.base import MapWindowProperties
+@@ -421,7 +422,7 @@
+         Print options and output menu for map display
+         """
+         point = wx.GetMousePosition()
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         # Add items to the menu
+         setup = wx.MenuItem(printmenu, wx.ID_ANY, _('Page setup'))
+         printmenu.AppendItem(setup)
+@@ -467,7 +468,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomwind = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 Index: gui/wxpython/iscatt/controllers.py
 ===================================================================
 --- gui/wxpython/iscatt/controllers.py	(revision 73002)
@@ -6593,7 +6880,7 @@ Index: gui/wxpython/iscatt/frame.py
  
  from gui_core.gselect import Select
  from gui_core.dialogs import SetOpacityDialog
-+from gui_core.wrap import StaticBox
++from gui_core.wrap import StaticBox, Menu
  from iscatt.controllers import ScattsManager
  from iscatt.toolbars import MainToolbar, EditingToolbar, CategoryToolbar
  from iscatt.iscatt_core import idScattToidBands
@@ -6617,6 +6904,15 @@ Index: gui/wxpython/iscatt/frame.py
              scatt.UpdateCur(busy)
  
      def CursorPlotMove(self, x, y, scatt_id):
+@@ -569,7 +571,7 @@
+         cat_id = cats[cat_idx]
+         showed = self.cats_mgr.GetCategoryAttrs(cat_id)['show']
+ 
+-        menu = wx.Menu()
++        menu = Menu()
+ 
+         item_id = wx.NewId()
+         menu.Append(item_id, text=_("Rename class"))
 Index: gui/wxpython/iscatt/iscatt_core.py
 ===================================================================
 --- gui/wxpython/iscatt/iscatt_core.py	(revision 73002)
@@ -6752,7 +7048,15 @@ Index: gui/wxpython/iscatt/plots.py
  import numpy as np
  from math import ceil
  from multiprocessing import Process, Queue
-@@ -550,7 +551,7 @@
+@@ -24,6 +25,7 @@
+ from iscatt.core_c import MergeArrays, ApplyColormap
+ from iscatt.dialogs import ManageBusyCursorMixin
+ from core.settings import UserSettings
++from gui_core.wrap import Menu
+ 
+ try:
+     import matplotlib
+@@ -550,7 +552,7 @@
  
  def _rendDtMemmapsToFiles(rend_dt):
  
@@ -6761,7 +7065,7 @@ Index: gui/wxpython/iscatt/plots.py
          if 'dt' in v:
              rend_dt[k]['sh'] = v['dt'].shape
              rend_dt[k]['dt'] = v['dt'].filename
-@@ -558,7 +559,7 @@
+@@ -558,7 +560,7 @@
  
  def _rendDtFilesToMemmaps(rend_dt):
  
@@ -6770,6 +7074,15 @@ Index: gui/wxpython/iscatt/plots.py
          if 'dt' in v:
              rend_dt[k]['dt'] = np.memmap(filename=v['dt'], shape=v['sh'])
              del rend_dt[k]['sh']
+@@ -613,7 +615,7 @@
+             return
+ 
+         if event.button == 3:
+-            menu = wx.Menu()
++            menu = Menu()
+             menu_items = [["zoom_to_extend", _("Zoom to scatter plot extend"),
+                            lambda event: self.plot.ZoomToExtend()]]
+ 
 Index: gui/wxpython/lmgr/layertree.py
 ===================================================================
 --- gui/wxpython/lmgr/layertree.py	(revision 73002)
@@ -7123,6 +7436,36 @@ Index: gui/wxpython/location_wizard/wizard.py
              if code is not None:
                  data.append((code, val[0], val[1]))
  
+Index: gui/wxpython/mapdisp/frame.py
+===================================================================
+--- gui/wxpython/mapdisp/frame.py	(revision 73002)
++++ gui/wxpython/mapdisp/frame.py	(working copy)
+@@ -48,6 +48,7 @@
+ from gui_core.forms import GUI
+ from core.giface import Notification
+ from gui_core.vselect import VectorSelectBase, VectorSelectHighlighter
++from gui_core.wrap import Menu
+ from mapdisp import statusbar as sb
+ 
+ import grass.script as grass
+@@ -806,7 +807,7 @@
+         """
+         Print options and output menu for map display
+         """
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         # Add items to the menu
+         setup = wx.MenuItem(printmenu, wx.ID_ANY, _('Page setup'))
+         printmenu.AppendItem(setup)
+@@ -1383,7 +1384,7 @@
+     def OnZoomMenu(self, event):
+         """Popup Zoom menu
+         """
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+ 
+         for label, handler in (
+             (_('Zoom to default region'),
 Index: gui/wxpython/mapdisp/main.py
 ===================================================================
 --- gui/wxpython/mapdisp/main.py	(revision 73002)
@@ -7307,7 +7650,15 @@ Index: gui/wxpython/mapswipe/mapwindow.py
 ===================================================================
 --- gui/wxpython/mapswipe/mapwindow.py	(revision 73002)
 +++ gui/wxpython/mapswipe/mapwindow.py	(working copy)
-@@ -52,8 +52,8 @@
+@@ -23,6 +23,7 @@
+ from core.utils import _
+ from core.settings import UserSettings
+ from mapwin.buffered import BufferedMapWindow
++from gui_core.wrap import Rect
+ 
+ 
+ EVT_MY_MOUSE_EVENTS = wx.NewEventType()
+@@ -52,8 +53,8 @@
  
      def _bindMouseEvents(self):
          """Binds wx mouse events and custom mouse events"""
@@ -7318,6 +7669,36 @@ Index: gui/wxpython/mapswipe/mapwindow.py
          self.Bind(EVT_MOTION, self.OnMotion)
          self.Bind(EVT_MOUSE_EVENTS, self.MouseActions)
          self.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
+@@ -174,7 +175,7 @@
+ 
+     def SetRasterNameText(self, name, textId):
+         """Sets text label with map name."""
+-        self.textdict[textId] = {'bbox': wx.Rect(), 'coords': [10, 10],
++        self.textdict[textId] = {'bbox': Rect(), 'coords': [10, 10],
+                                  'font': self.GetFont(), 'color': wx.BLACK,
+                                  'background': wx.LIGHT_GREY,
+                                  'rotation': 0, 'text': name,
+Index: gui/wxpython/mapswipe/toolbars.py
+===================================================================
+--- gui/wxpython/mapswipe/toolbars.py	(revision 73002)
++++ gui/wxpython/mapswipe/toolbars.py	(working copy)
+@@ -19,6 +19,7 @@
+ import wx
+ 
+ from gui_core.toolbars import BaseToolbar, BaseIcons
++from gui_core.wrap import Menu
+ from icons.icon import MetaIcon
+ from core.utils import _
+ 
+@@ -148,7 +149,7 @@
+ 
+     def OnToolMenu(self, event):
+         """Menu for additional tools"""
+-        toolMenu = wx.Menu()
++        toolMenu = Menu()
+ 
+         for label, itype, handler, desc in (
+             (_("Switch orientation"),
 Index: gui/wxpython/mapwin/base.py
 ===================================================================
 --- gui/wxpython/mapwin/base.py	(revision 73002)
@@ -7370,7 +7751,107 @@ Index: gui/wxpython/mapwin/buffered.py
 ===================================================================
 --- gui/wxpython/mapwin/buffered.py	(revision 73002)
 +++ gui/wxpython/mapwin/buffered.py	(working copy)
-@@ -807,7 +807,7 @@
+@@ -37,7 +37,8 @@
+ import grass.script as grass
+ 
+ from gui_core.dialogs import SavedRegion
+-from gui_core.wrap import DragImage, PseudoDC, EmptyBitmap, BitmapFromImage, Window
++from gui_core.wrap import DragImage, PseudoDC, EmptyBitmap, BitmapFromImage, \
++    Window, Menu, Rect
+ from core.gcmd import RunCommand, GException, GError, GMessage
+ from core.debug import Debug
+ from core.settings import UserSettings
+@@ -243,7 +244,7 @@
+             return
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+ 
+         if not hasattr(self, "popupCopyCoordinates"):
+             self.popupCopyCoordinates = wx.NewId()
+@@ -349,7 +350,7 @@
+                 bitmap, coords[0],
+                 coords[1],
+                 True)  # draw the composite map
+-            pdc.SetIdBounds(drawid, wx.Rect(coords[0], coords[1], w, h))
++            pdc.SetIdBounds(drawid, Rect(coords[0], coords[1], w, h))
+ 
+         elif pdctype == 'box':  # draw a box on top of the map
+             if pen:
+@@ -363,7 +364,7 @@
+                 y1 = min(coords[1], coords[3])
+                 rwidth = x2 - x1
+                 rheight = y2 - y1
+-                rect = wx.Rect(x1, y1, rwidth, rheight)
++                rect = Rect(x1, y1, rwidth, rheight)
+                 pdc.DrawRectangleRect(rect)
+                 pdc.SetIdBounds(drawid, rect)
+ 
+@@ -376,7 +377,7 @@
+                         coords[0], coords[1]), wx.Point(
+                         coords[2], coords[3]))
+                 pdc.SetIdBounds(
+-                    drawid, wx.Rect(
++                    drawid, Rect(
+                         coords[0],
+                         coords[1],
+                         coords[2],
+@@ -426,7 +427,7 @@
+                     x2 = max(xlist)
+                     y1 = min(ylist)
+                     y2 = max(ylist)
+-                    pdc.SetIdBounds(drawid, wx.Rect(x1, y1, x2, y2))
++                    pdc.SetIdBounds(drawid, Rect(x1, y1, x2, y2))
+ 
+         elif pdctype == 'polygon':
+             if pen:
+@@ -439,7 +440,7 @@
+                 y = min(coords, key=lambda x: x[1])[1]
+                 w = max(coords, key=lambda x: x[0])[0] - x
+                 h = max(coords, key=lambda x: x[1])[1] - y
+-                pdc.SetIdBounds(drawid, wx.Rect(x, y, w, h))
++                pdc.SetIdBounds(drawid, Rect(x, y, w, h))
+ 
+         elif pdctype == 'circle':  # draw circle
+             if pen:
+@@ -454,7 +455,7 @@
+                                                  coords[3]) - radius,
+                     radius=radius)
+                 pdc.SetIdBounds(
+-                    drawid, wx.Rect(
++                    drawid, Rect(
+                         coords[0],
+                         coords[1],
+                         coords[2],
+@@ -468,7 +469,7 @@
+                                coords[1] - 5,
+                                coords[0] + 5,
+                                coords[1] + 5)
+-                pdc.SetIdBounds(drawid, wx.Rect(coordsBound))
++                pdc.SetIdBounds(drawid, Rect(coordsBound))
+ 
+         elif pdctype == 'text':  # draw text on top of map
+             if not img['active']:
+@@ -516,7 +517,7 @@
+             rotation = 0.0
+ 
+         coords = textinfo['coords']
+-        bbox = wx.Rect(coords[0], coords[1], 0, 0)
++        bbox = Rect(coords[0], coords[1], 0, 0)
+         relCoords = (0, 0)
+         Debug.msg(4, "BufferedWindow.TextBounds(): text=%s, rotation=%f" %
+                   (textinfo['text'], rotation))
+@@ -612,7 +613,7 @@
+                 # store buffered image
+                 # self.bufferLast = wx.BitmapFromImage(self.buffer.ConvertToImage())
+                 self.bufferLast = dc.GetAsBitmap(
+-                    wx.Rect(0, 0, self.Map.width, self.Map.height))
++                    Rect(0, 0, self.Map.width, self.Map.height))
+ 
+             self.pdc.DrawBitmap(self.bufferLast, 0, 0, False)
+             self.pdc.DrawToDC(dc)
+@@ -807,7 +808,7 @@
          else:
              img = None
  
@@ -7379,6 +7860,42 @@ Index: gui/wxpython/mapwin/buffered.py
              if self.imagedict[key]['id'] == imgId:
                  del self.imagedict[key]
  
+@@ -1072,7 +1073,7 @@
+         r = self.pdc.GetIdBounds(id)
+ 
+         if isinstance(r, list):
+-            r = wx.Rect(r[0], r[1], r[2], r[3])
++            r = Rect(r[0], r[1], r[2], r[3])
+         if id in self.textdict:  # text dragging
+             rtop = (r[0], r[1] - r[3], r[2], r[3])
+             r = r.Union(rtop)
+@@ -1083,7 +1084,7 @@
+ 
+         r2 = self.pdc.GetIdBounds(id)
+         if isinstance(r2, list):
+-            r2 = wx.Rect(r[0], r[1], r[2], r[3])
++            r2 = Rect(r[0], r[1], r[2], r[3])
+         if id in self.textdict:  # text
+             self.textdict[id]['bbox'] = r2
+             self.textdict[id]['coords'][0] += dx
+@@ -1117,7 +1118,7 @@
+                            end[0], end[1]]
+             r = pdc.GetIdBounds(boxid)
+             if isinstance(r, list):
+-                r = wx.Rect(r[0], r[1], r[2], r[3])
++                r = Rect(r[0], r[1], r[2], r[3])
+             r.Inflate(4, 4)
+             try:
+                 pdc.ClearId(boxid)
+@@ -1135,7 +1136,7 @@
+             x2 = max(begin[0], end[0])
+             y1 = min(begin[1], end[1])
+             y2 = max(begin[1], end[1])
+-            r = wx.Rect(x1, y1, x2 - x1, y2 - y1)
++            r = Rect(x1, y1, x2 - x1, y2 - y1)
+             r.Inflate(4, 4)
+             try:
+                 pdc.ClearId(self.lineid)
 Index: gui/wxpython/modules/colorrules.py
 ===================================================================
 --- gui/wxpython/modules/colorrules.py	(revision 73002)
@@ -7607,7 +8124,7 @@ Index: gui/wxpython/modules/extensions.py
  from gui_core.widgets import GListCtrl, SearchModuleWidget
  from gui_core.treeview import CTreeView
  from core.toolboxes import toolboxesOutdated
-+from gui_core.wrap import Button, StaticBox, TextCtrl
++from gui_core.wrap import Button, StaticBox, TextCtrl, Menu
  
  
  class InstallExtensionWindow(wx.Frame):
@@ -7669,6 +8186,15 @@ Index: gui/wxpython/modules/extensions.py
  
          self.btnClose.Bind(wx.EVT_BUTTON, lambda evt: self.Close())
          self.btnFetch.Bind(wx.EVT_BUTTON, self.OnFetch)
+@@ -234,7 +235,7 @@
+ 
+         data = node.data
+         if data and 'command' in data:
+-            self.popupMenu = wx.Menu()
++            self.popupMenu = Menu()
+             self.popupMenu.Append(self.popupID['install'], text=_("Install"))
+             self.Bind(wx.EVT_MENU, self.OnInstall, id=self.popupID['install'])
+             self.popupMenu.AppendSeparator()
 @@ -401,7 +402,7 @@
  
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
@@ -7704,6 +8230,28 @@ Index: gui/wxpython/modules/extensions.py
  
          self.btnUninstall.Bind(wx.EVT_BUTTON, self.OnUninstall)
          self.btnUpdate.Bind(wx.EVT_BUTTON, self.OnUpdate)
+Index: gui/wxpython/modules/histogram.py
+===================================================================
+--- gui/wxpython/modules/histogram.py	(revision 73002)
++++ gui/wxpython/modules/histogram.py	(working copy)
+@@ -32,7 +32,7 @@
+ from core.debug import Debug
+ from core.gcmd import GError
+ from gui_core.toolbars import BaseToolbar, BaseIcons
+-from gui_core.wrap import PseudoDC
++from gui_core.wrap import PseudoDC, Menu
+ 
+ 
+ class BufferedWindow(wx.Window):
+@@ -496,7 +496,7 @@
+         """Print options and output menu
+         """
+         point = wx.GetMousePosition()
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         # Add items to the menu
+         setup = wx.MenuItem(printmenu, id=wx.ID_ANY, text=_('Page setup'))
+         printmenu.AppendItem(setup)
 Index: gui/wxpython/modules/import_export.py
 ===================================================================
 --- gui/wxpython/modules/import_export.py	(revision 73002)
@@ -9733,7 +10281,7 @@ Index: gui/wxpython/photo2image/ip2i_manager.py
  from core.giface import Notification
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, StaticText, StaticBox, \
-+    TextCtrl
++    TextCtrl, Menu
  
  from location_wizard.wizard import TitledPage as TitledPage
  
@@ -9746,6 +10294,15 @@ Index: gui/wxpython/photo2image/ip2i_manager.py
              col = UserSettings.Get(group='gcpman', key='symbol', subkey=k)
              self.pointsToDrawSrc.GetPen(v).SetColour(wx.Colour(
                  col[0], col[1], col[2], 255))  # TODO GetPen neni to spatne?
+@@ -1451,7 +1453,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomsource = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 @@ -1743,7 +1745,7 @@
  
          sizer = wx.BoxSizer(wx.VERTICAL)
@@ -9948,6 +10505,36 @@ Index: gui/wxpython/photo2image/ip2i_manager.py
              parent=panel, id=wx.ID_ANY, value="", size=(
                  350, -1))
          self.ext_txt.SetValue(self.parent.extension)
+Index: gui/wxpython/photo2image/ip2i_mapdisplay.py
+===================================================================
+--- gui/wxpython/photo2image/ip2i_mapdisplay.py	(revision 73002)
++++ gui/wxpython/photo2image/ip2i_mapdisplay.py	(working copy)
+@@ -30,6 +30,7 @@
+ from core.utils import _
+ from gui_core.dialogs import GetImageHandlers, ImageSizeDialog
+ from gui_core.mapdisp import SingleMapFrame
++from gui_core.wrap import Menu
+ from core.settings import UserSettings
+ from mapwin.buffered import BufferedMapWindow
+ from mapwin.base import MapWindowProperties
+@@ -420,7 +421,7 @@
+         Print options and output menu for map display
+         """
+         point = wx.GetMousePosition()
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         # Add items to the menu
+         setup = wx.MenuItem(printmenu, wx.ID_ANY, _('Page setup'))
+         printmenu.AppendItem(setup)
+@@ -466,7 +467,7 @@
+         """Popup Zoom menu
+         """
+         point = wx.GetMousePosition()
+-        zoommenu = wx.Menu()
++        zoommenu = Menu()
+         # Add items to the menu
+ 
+         zoomwind = wx.MenuItem(zoommenu, wx.ID_ANY, _(
 Index: gui/wxpython/psmap/dialogs.py
 ===================================================================
 --- gui/wxpython/psmap/dialogs.py	(revision 73002)
@@ -9958,10 +10545,19 @@ Index: gui/wxpython/psmap/dialogs.py
  from gui_core.dialogs import SymbolDialog
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, TextCtrl, BitmapButton, \
-+    StaticText, StaticBox
++    StaticText, StaticBox, Rect
  from psmap.utils import *
  from psmap.instructions import *
  
+@@ -148,7 +149,7 @@
+             # painting the control, but there is no valid item selected yet
+             return
+ 
+-        r = wx.Rect(*rect)  # make a copy
++        r = Rect(*rect)  # make a copy
+         r.Deflate(3, 5)
+ 
+         penStyle = wx.SOLID
 @@ -227,7 +228,7 @@
  
      def AddUnits(self, parent, dialogDict):
@@ -11257,6 +11853,134 @@ Index: gui/wxpython/psmap/frame.py
  from math import sin, cos, pi, sqrt
  
  import wx
+@@ -39,7 +42,7 @@
+ from gui_core.forms import GUI
+ from gui_core.dialogs import HyperlinkDialog
+ from gui_core.ghelp import ShowAboutDialog
+-from gui_core.wrap import PseudoDC
++from gui_core.wrap import PseudoDC, Rect
+ from psmap.menudata import PsMapMenuData
+ from gui_core.toolbars import ToolSwitcher
+ 
+@@ -855,9 +858,9 @@
+         if 0 < rotation < pi:
+             Y = y - H
+         if rotation == 0:
+-            return wx.Rect(x, y, *textExtent)
++            return Rect(x, y, *textExtent)
+         else:
+-            return wx.Rect(X, Y, abs(W), abs(H)).Inflate(h, h)
++            return Rect(X, Y, abs(W), abs(H)).Inflate(h, h)
+ 
+     def makePSFont(self, textDict):
+         """creates a wx.Font object from selected postscript font. To be
+@@ -1362,7 +1365,7 @@
+ 
+         x = cW / 2 - pW / 2
+         y = cH / 2 - pH / 2
+-        self.DrawPaper(wx.Rect(x, y, pW, pH))
++        self.DrawPaper(Rect(x, y, pW, pH))
+ 
+     def modifyRectangle(self, r):
+         """Recalculates rectangle not to have negative size"""
+@@ -1501,7 +1504,7 @@
+         else:
+             self.mouse['use'] = 'zoomout'
+ 
+-        zoomFactor, view = self.ComputeZoom(wx.Rect(0, 0, 0, 0))
++        zoomFactor, view = self.ComputeZoom(Rect(0, 0, 0, 0))
+         self.Zoom(zoomFactor, view)
+         self.mouse['use'] = oldUse
+ 
+@@ -1694,7 +1697,7 @@
+                             self.dragId].type].updateDialog()
+ 
+         elif self.mouse['use'] in ('addPoint', 'addLine', 'addRectangle'):
+-            endCoordinates = self.CanvasPaperCoordinates(rect=wx.Rect(
++            endCoordinates = self.CanvasPaperCoordinates(rect=Rect(
+                 event.GetX(), event.GetY(), 0, 0), canvasToPaper=True)[:2]
+ 
+             diffX = event.GetX() - self.mouse['begin'][0]
+@@ -1710,7 +1713,7 @@
+                     return
+ 
+                 beginCoordinates = self.CanvasPaperCoordinates(
+-                    rect=wx.Rect(
++                    rect=Rect(
+                         self.mouse['begin'][0],
+                         self.mouse['begin'][1],
+                         0, 0),
+@@ -1772,7 +1775,7 @@
+             if self.mouse['use'] in (
+                     'zoomin', 'zoomout', 'addMap', 'addLine', 'addRectangle'):
+                 self.mouse['end'] = event.GetPosition()
+-                r = wx.Rect(
++                r = Rect(
+                     self.mouse['begin'][0],
+                     self.mouse['begin'][1],
+                     self.mouse['end'][0] -
+@@ -1847,7 +1850,7 @@
+                     if newWidth < 10 or newHeight < 10:
+                         return
+ 
+-                    bounds = wx.Rect(x, y, newWidth, newHeight)
++                    bounds = Rect(x, y, newWidth, newHeight)
+                     self.Draw(
+                         pen=self.pen['map'],
+                         brush=self.brush['map'],
+@@ -2149,7 +2152,7 @@
+         self.Zoom(zoomFactor, view)
+ 
+     def Draw(self, pen, brush, pdc, drawid=None, pdctype='rect',
+-             bb=wx.Rect(0, 0, 0, 0), lineCoords=None):
++             bb=Rect(0, 0, 0, 0), lineCoords=None):
+         """Draw object with given pen and brush.
+ 
+         :param pdc: PseudoDC
+@@ -2193,15 +2196,15 @@
+             text = '\n'.join(self.itemLabels[drawid])
+             w, h, lh = dc.GetMultiLineTextExtent(text)
+             textExtent = (w, h)
+-            textRect = wx.Rect(0, 0, *textExtent).CenterIn(bb)
++            textRect = Rect(0, 0, *textExtent).CenterIn(bb)
+             r = map(int, bb)
+-            while not wx.Rect(*r).ContainsRect(textRect) and size >= 8:
++            while not Rect(*r).ContainsRect(textRect) and size >= 8:
+                 size -= 2
+                 font.SetPointSize(size)
+                 dc.SetFont(font)
+                 pdc.SetFont(font)
+                 textExtent = dc.GetTextExtent(text)
+-                textRect = wx.Rect(0, 0, *textExtent).CenterIn(bb)
++                textRect = Rect(0, 0, *textExtent).CenterIn(bb)
+             pdc.SetTextForeground(wx.Colour(100, 100, 100, 200))
+             pdc.SetBackgroundMode(wx.TRANSPARENT)
+             pdc.DrawLabel(text=text, rect=textRect)
+@@ -2327,7 +2330,7 @@
+         else:
+             pdc.DrawRotatedText(textDict['text'], coords[0], coords[1], rot)
+ 
+-        pdc.SetIdBounds(drawId, wx.Rect(*bounds))
++        pdc.SetIdBounds(drawId, Rect(*bounds))
+         self.Refresh()
+         pdc.EndDrawing()
+ 
+@@ -2382,7 +2385,7 @@
+         iH = iH * self.currScale
+         x = cW / 2 - iW / 2
+         y = cH / 2 - iH / 2
+-        imageRect = wx.Rect(x, y, iW, iH)
++        imageRect = Rect(x, y, iW, iH)
+ 
+         return imageRect
+ 
+@@ -2501,5 +2504,5 @@
+ 
+     def ScaleRect(self, rect, scale):
+         """Scale rectangle"""
+-        return wx.Rect(rect.GetLeft() * scale, rect.GetTop() * scale,
++        return Rect(rect.GetLeft() * scale, rect.GetTop() * scale,
+                        rect.GetSize()[0] * scale, rect.GetSize()[1] * scale)
 Index: gui/wxpython/psmap/instructions.py
 ===================================================================
 --- gui/wxpython/psmap/instructions.py	(revision 73002)
@@ -12251,7 +12975,7 @@ Index: gui/wxpython/vdigit/dialogs.py
  from core.utils import _
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, StaticText, \
-+    StaticBox
++    StaticBox, Menu
  
  
  class VDigitCategoryDialog(wx.Dialog, listmix.ColumnSorterMixin):
@@ -12340,6 +13064,15 @@ Index: gui/wxpython/vdigit/dialogs.py
                       proportion=0, border=5,
                       flag=wx.ALIGN_CENTER_VERTICAL)
          fidSizer.Add(self.fidMulti, proportion=0,
+@@ -280,7 +282,7 @@
+             self.Bind(wx.EVT_MENU, self.OnReload, id=self.popupID3)
+ 
+         # generate popup-menu
+-        menu = wx.Menu()
++        menu = Menu()
+         menu.Append(self.popupID1, _("Delete selected"))
+         if self.list.GetFirstSelected() == -1:
+             menu.Enable(self.popupID1, False)
 @@ -413,7 +415,7 @@
          newfid = -1
  
@@ -12709,6 +13442,28 @@ Index: gui/wxpython/vdigit/preferences.py
              checked = self.FindWindowById(val['check']).IsChecked()
              column = self.FindWindowById(val['column']).GetValue()
              unitsIdx = self.FindWindowById(val['units']).GetSelection()
+Index: gui/wxpython/vdigit/toolbars.py
+===================================================================
+--- gui/wxpython/vdigit/toolbars.py	(revision 73002)
++++ gui/wxpython/vdigit/toolbars.py	(working copy)
+@@ -21,7 +21,7 @@
+ 
+ from gui_core.toolbars import BaseToolbar, BaseIcons
+ from gui_core.dialogs import CreateNewVector, VectorDialog
+-from gui_core.wrap import PseudoDC
++from gui_core.wrap import PseudoDC, Menu
+ from vdigit.preferences import VDigitSettingsDialog
+ from core.debug import Debug
+ from core.settings import UserSettings
+@@ -553,7 +553,7 @@
+     def OnAdditionalToolMenu(self, event):
+         """Menu for additional tools"""
+         point = wx.GetMousePosition()
+-        toolMenu = wx.Menu()
++        toolMenu = Menu()
+ 
+         for label, itype, handler, desc in (
+             (_('Break selected lines/boundaries at intersection'),
 Index: gui/wxpython/vdigit/wxdigit.py
 ===================================================================
 --- gui/wxpython/vdigit/wxdigit.py	(revision 73002)
@@ -12742,7 +13497,42 @@ Index: gui/wxpython/vdigit/wxdisplay.py
  
  import wx
  
-@@ -1176,7 +1177,7 @@
+@@ -26,6 +27,7 @@
+ from core.debug import Debug
+ from core.settings import UserSettings
+ from core.utils import _
++from gui_core.wrap import Rect
+ 
+ try:
+     from grass.lib.gis import *
+@@ -336,7 +338,7 @@
+                     pdc.SetPen(pen)
+                     pdc.SetIdBounds(
+                         dcId - 1,
+-                        wx.Rect(
++                        Rect(
+                             point_beg.x,
+                             point_beg.y,
+                             0,
+@@ -348,7 +350,7 @@
+                     dcId += 2
+                 pdc.SetIdBounds(
+                     dcId - 1,
+-                    wx.Rect(
++                    Rect(
+                         robj.point[
+                             robj.npoints - 1].x,
+                         robj.point[
+@@ -891,7 +893,7 @@
+                 points.x[idx],
+                 points.y[idx],
+                 points.z[idx])
+-            rect = wx.Rect(vx, vy, 0, 0)
++            rect = Rect(vx, vy, 0, 0)
+             self.dc.SetIdBounds(DCid, rect)
+             DCid += 2
+ 
+@@ -1176,7 +1178,7 @@
              catsDict[layer].append(cats.cat[i])
  
          catsStr = ''
@@ -13694,7 +14484,15 @@ Index: gui/wxpython/wxplot/base.py
  
  import wx
  
-@@ -127,7 +128,7 @@
+@@ -27,6 +28,7 @@
+ from core.render import Map
+ from icons.icon import MetaIcon
+ from gui_core.toolbars import BaseIcons
++from gui.core.wrap import Menu
+ from core.utils import _
+ 
+ import grass.script as grass
+@@ -127,7 +129,7 @@
          for assigning colors to images in imagery groups"""
  
          self.colorDict = {}
@@ -13703,6 +14501,24 @@ Index: gui/wxpython/wxplot/base.py
              if clr == 'white':
                  continue
              r = grass.named_colors[clr][0] * 255
+@@ -512,7 +514,7 @@
+         """Popup menu for plot and text options
+         """
+         point = wx.GetMousePosition()
+-        popt = wx.Menu()
++        popt = Menu()
+         # Add items to the menu
+         settext = wx.MenuItem(popt, wx.ID_ANY, _('Text settings'))
+         popt.AppendItem(settext)
+@@ -606,7 +608,7 @@
+         """Print options and output menu
+         """
+         point = wx.GetMousePosition()
+-        printmenu = wx.Menu()
++        printmenu = Menu()
+         for title, handler in ((_("Page setup"), self.OnPageSetup),
+                                (_("Print preview"), self.OnPrintPreview),
+                                (_("Print display"), self.OnDoPrint)):
 Index: gui/wxpython/wxplot/dialogs.py
 ===================================================================
 --- gui/wxpython/wxplot/dialogs.py	(revision 73002)
