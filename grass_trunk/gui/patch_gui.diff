@@ -21,7 +21,7 @@ Index: gui/wxpython/animation/dialogs.py
  from gui_core.widgets import FloatValidator
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, CheckBox, TextCtrl, Button, \
-+    BitmapButton, StaticText, StaticBox
++    BitmapButton, StaticText, StaticBox, Choice, RadioButton
  
  from animation.utils import TemporalMode, getRegisteredMaps, getNameAndLayer, getCpuCount
  from animation.data import AnimationData, AnimLayer
@@ -90,7 +90,7 @@ Index: gui/wxpython/animation/dialogs.py
          self.btnOk.SetDefault()
          self.btnOk.Bind(wx.EVT_BUTTON, self.OnOk)
          # button sizer
-@@ -381,7 +382,7 @@
+@@ -381,10 +382,10 @@
                  _("bottom right")])
          self.windowChoice.SetSelection(self.animationData.windowIndex)
  
@@ -98,8 +98,18 @@ Index: gui/wxpython/animation/dialogs.py
 +        self.nameCtrl = TextCtrl(
              panel, id=wx.ID_ANY, value=self.animationData.name)
  
-         self.nDChoice = wx.Choice(panel, id=wx.ID_ANY)
-@@ -399,7 +400,7 @@
+-        self.nDChoice = wx.Choice(panel, id=wx.ID_ANY)
++        self.nDChoice = Choice(panel, id=wx.ID_ANY)
+         mode = self.animationData.viewMode
+         index = 0
+         for i, (viewMode, viewModeName) in enumerate(
+@@ -394,12 +395,12 @@
+                 index = i
+ 
+         self.nDChoice.SetSelection(index)
+-        self.nDChoice.SetToolTipString(_("Select 2D or 3D view"))
++        self.nDChoice.SetToolTip(_("Select 2D or 3D view"))
+         self.nDChoice.Bind(wx.EVT_CHOICE, self.OnViewMode)
  
          gridSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
          gridSizer.Add(
@@ -180,7 +190,25 @@ Index: gui/wxpython/animation/dialogs.py
                        pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL)
          self.stRegion = Select(parent=panel, type='region', size=(200, -1))
          if self.animationData.startRegion:
-@@ -580,12 +581,12 @@
+@@ -567,7 +568,7 @@
+             self.stRegion, pos=(0, 1),
+             flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND)
+ 
+-        self.endRegRadio = wx.RadioButton(
++        self.endRegRadio = RadioButton(
+             panel, label=_("End region:"), style=wx.RB_GROUP)
+         gridSizer.Add(self.endRegRadio, pos=(1, 0), flag=wx.EXPAND)
+         self.endRegion = Select(parent=panel, type='region', size=(200, -1))
+@@ -574,18 +575,18 @@
+         gridSizer.Add(
+             self.endRegion, pos=(1, 1),
+             flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND)
+-        self.zoomRadio = wx.RadioButton(panel, label=_("Zoom value:"))
+-        self.zoomRadio.SetToolTipString(_("N-S/E-W distances in map units used to "
+-                                          "gradually reduce region."))
++        self.zoomRadio = RadioButton(panel, label=_("Zoom value:"))
++        self.zoomRadio.SetToolTip(_("N-S/E-W distances in map units used to "
++                                    "gradually reduce region."))
          gridSizer.Add(self.zoomRadio, pos=(2, 0), flag=wx.EXPAND)
  
          zoomSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -596,7 +624,15 @@ Index: gui/wxpython/animation/utils.py
  from multiprocessing import cpu_count
  try:
      from PIL import Image
-@@ -97,7 +98,7 @@
+@@ -29,6 +30,7 @@
+ 
+ import grass.temporal as tgis
+ import grass.script as grass
++from grass.script.utils import encode
+ 
+ from core.gcmd import GException
+ from core.utils import _
+@@ -97,7 +99,7 @@
                  raise GException(_("Map <%s> not found.") % name)
          else:
              found = False
@@ -605,6 +641,24 @@ Index: gui/wxpython/animation/utils.py
                  if name in mapNames:
                      found = True
                      newNames.append(name + "@" + mapset)
+@@ -278,7 +280,7 @@
+     name = '_'.join(cmd)
+     if region:
+         name += str(sorted(region.items()))
+-    return hashlib.sha1(name).hexdigest()
++    return hashlib.sha1(encode(name)).hexdigest()
+ 
+ 
+ def HashCmds(cmds, region):
+@@ -286,7 +288,7 @@
+     name = ';'.join([item for sublist in cmds for item in sublist])
+     if region:
+         name += str(sorted(region.items()))
+-    return hashlib.sha1(name).hexdigest()
++    return hashlib.sha1(encode(name)).hexdigest()
+ 
+ 
+ def GetFileFromCmd(dirname, cmd, region, extension='ppm'):
 Index: gui/wxpython/core/gcmd.py
 ===================================================================
 --- gui/wxpython/core/gcmd.py	(revision 73002)
@@ -740,6 +794,15 @@ Index: gui/wxpython/core/utils.py
  
  from grass.script import core as grass
  from grass.script import task as gtask
+@@ -46,7 +47,7 @@
+ 
+ def normalize_whitespace(text):
+     """Remove redundant whitespace from a string"""
+-    return string.join(string.split(text), ' ')
++    return (' ').join(text.split())
+ 
+ 
+ def split(s):
 @@ -324,7 +325,10 @@
  
  def ListSortLower(list):
@@ -3978,7 +4041,12 @@ Index: gui/wxpython/gui_core/forms.py
 ===================================================================
 --- gui/wxpython/gui_core/forms.py	(revision 73002)
 +++ gui/wxpython/gui_core/forms.py	(working copy)
-@@ -54,7 +54,13 @@
+@@ -49,12 +49,17 @@
+ from __future__ import print_function
+ 
+ import sys
+-import string
+ import textwrap
  import os
  import copy
  import locale
@@ -3993,7 +4061,7 @@ Index: gui/wxpython/gui_core/forms.py
  import re
  import codecs
  
-@@ -100,7 +106,8 @@
+@@ -100,7 +105,8 @@
  from gui_core.widgets import FloatValidator, GNotebook, FormNotebook, FormListbook
  from core.giface import Notification
  from gui_core.widgets import LayersList
@@ -4003,7 +4071,35 @@ Index: gui/wxpython/gui_core/forms.py
  from core.debug import Debug
  
  wxUpdateDialog, EVT_DIALOG_UPDATE = NewEvent()
-@@ -686,7 +693,7 @@
+@@ -120,20 +126,18 @@
+     """
+     if width > 0:
+         return escape_ampersand(
+-            string.strip(
+-                os.linesep.join(
+-                    textwrap.wrap(
+-                        utils.normalize_whitespace(someString),
+-                        width)),
+-                ".,;:"))
++            os.linesep.join(
++                textwrap.wrap(
++                    utils.normalize_whitespace(someString),
++                    width)).strip(".,;:"))
+     else:
+-        return escape_ampersand(string.strip(
+-            utils.normalize_whitespace(someString), ".,;:"))
++        return escape_ampersand(
++            utils.normalize_whitespace(someString).strip(".,;:"))
+ 
+ 
+ def escape_ampersand(text):
+     """Escapes ampersands with additional ampersand for GUI"""
+-    return string.replace(text, "&", "&&")
++    return text.replace("&", "&&")
+ 
+ 
+ class UpdateThread(Thread):
+@@ -686,7 +690,7 @@
  
          if self.get_dcmd is None and hasNew:
              # close dialog when command is terminated
@@ -4012,7 +4108,7 @@ Index: gui/wxpython/gui_core/forms.py
                  parent=self.panel,
                  label=_('Close dialog on finish'),
                  style=wx.NO_BORDER)
-@@ -695,7 +702,7 @@
+@@ -695,7 +699,7 @@
                      group='cmd',
                      key='closeDlg',
                      subkey='enabled'))
@@ -4021,7 +4117,7 @@ Index: gui/wxpython/gui_core/forms.py
                  _(
                      "Close dialog when command is successfully finished. "
                      "Change this settings in Preferences dialog ('Command' tab)."))
-@@ -1041,13 +1048,13 @@
+@@ -1041,13 +1045,13 @@
              title_sizer = wx.BoxSizer(wx.HORIZONTAL)
              rtitle_txt = StaticText(parent=which_panel,
                                      label='(' + f['name'] + ')')
@@ -4037,7 +4133,7 @@ Index: gui/wxpython/gui_core/forms.py
              chk.SetValue(f.get('value', False))
              title_sizer.Add(chk, proportion=1,
                              flag=wx.EXPAND)
-@@ -1233,7 +1240,7 @@
+@@ -1233,7 +1237,7 @@
                                  max=maxValue)
                              style = wx.BOTTOM | wx.LEFT
                          else:
@@ -4046,7 +4142,7 @@ Index: gui/wxpython/gui_core/forms.py
                                  parent=which_panel, value=p.get(
                                      'default', ''))
                              style = wx.EXPAND | wx.BOTTOM | wx.LEFT
-@@ -1261,7 +1268,7 @@
+@@ -1261,7 +1265,7 @@
                                  os.path.join(
                                      globalvar.SYMBDIR,
                                      value) + '.png')
@@ -4055,7 +4151,7 @@ Index: gui/wxpython/gui_core/forms.py
                                  parent=which_panel, id=wx.ID_ANY, bitmap=bitmap)
                              iconLabel = StaticText(
                                  parent=which_panel, id=wx.ID_ANY)
-@@ -1310,7 +1317,7 @@
+@@ -1310,7 +1314,7 @@
                  if p.get('multiple', False) or \
                          p.get('type', 'string') == 'string' or \
                          len(p.get('key_desc', [])) > 1:
@@ -4064,7 +4160,7 @@ Index: gui/wxpython/gui_core/forms.py
                          parent=which_panel, value=p.get(
                              'default', ''))
  
-@@ -1358,7 +1365,7 @@
+@@ -1358,7 +1362,7 @@
                      which_sizer.Add(win, proportion=0,
                                      flag=style, border=5)
                  else:  # float
@@ -4073,7 +4169,7 @@ Index: gui/wxpython/gui_core/forms.py
                          parent=which_panel, value=p.get(
                              'default', ''), validator=FloatValidator())
                      style = wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT
-@@ -1550,10 +1557,10 @@
+@@ -1550,10 +1554,10 @@
                                  os.path.join(
                                      globalvar.ICONDIR, iconTheme,
                                      'map-info.png'))
@@ -4086,7 +4182,7 @@ Index: gui/wxpython/gui_core/forms.py
                                  _("Show graphical representation of temporal extent of dataset(s) ."))
                              p['wxId'].append(bb.GetId())
  
-@@ -1625,7 +1632,7 @@
+@@ -1625,7 +1629,7 @@
                                  'mapset',
                                  'dbase'):
                      if p.get('multiple', 'no') == 'yes':
@@ -4095,7 +4191,7 @@ Index: gui/wxpython/gui_core/forms.py
                              parent=which_panel, value=p.get(
                                  'default', ''), size=globalvar.DIALOG_TEXTCTRL_SIZE)
                          win.Bind(wx.EVT_TEXT, self.OnSetValue)
-@@ -1674,7 +1681,7 @@
+@@ -1674,7 +1678,7 @@
                                      wx.EVT_COMBOBOX, self.OnUpdateSelection)
                                  win.Bind(wx.EVT_COMBOBOX, self.OnSetValue)
                              else:
@@ -4104,7 +4200,7 @@ Index: gui/wxpython/gui_core/forms.py
                                      parent=which_panel, value=p.get(
                                          'default', ''),
                                      size=globalvar.DIALOG_TEXTCTRL_SIZE)
-@@ -1752,7 +1759,7 @@
+@@ -1752,7 +1756,7 @@
                      # and either a "transparent" checkbox or None
                      p['wxId'] = [None] * 3
                      if p.get('multiple', False):
@@ -4113,7 +4209,7 @@ Index: gui/wxpython/gui_core/forms.py
                          this_sizer.Add(
                              txt,
                              proportion=1,
-@@ -1841,9 +1848,9 @@
+@@ -1841,9 +1845,9 @@
                              'element', '') == 'file' and UserSettings.Get(
                              group='cmd', key='interactiveInput', subkey='enabled'):
                          # widget for interactive input
@@ -4126,7 +4222,7 @@ Index: gui/wxpython/gui_core/forms.py
                          if p.get('value', '') and os.path.isfile(p['value']):
                              ifbb.Clear()
                              enc = locale.getdefaultlocale()[1]
-@@ -1944,7 +1951,7 @@
+@@ -1944,7 +1948,7 @@
  
                      # normal text field
                      else:
@@ -4135,7 +4231,7 @@ Index: gui/wxpython/gui_core/forms.py
                          p['wxId'] = [win.GetId()]
                          win.Bind(wx.EVT_TEXT, self.OnSetValue)
  
-@@ -1969,7 +1976,7 @@
+@@ -1969,7 +1973,7 @@
                              self.parent.dialogClosing.connect(win.OnClose)
                      # normal text field
                      else:
@@ -4144,7 +4240,16 @@ Index: gui/wxpython/gui_core/forms.py
                          value = self._getValue(p)
                          win.SetValue(value)
                          p['wxId'] = [win.GetId()]
-@@ -2484,7 +2491,7 @@
+@@ -2237,7 +2241,7 @@
+             tabsizer[section].Fit(tab[section])
+             tab[section].Layout()
+             minsecsizes = tabsizer[section].GetSize()
+-            maxsizes = map(lambda x: max(maxsizes[x], minsecsizes[x]), (0, 1))
++            maxsizes = list(map(lambda x: max(maxsizes[x], minsecsizes[x]), (0, 1)))
+ 
+         # TODO: be less arbitrary with these 600
+         self.panelMinHeight = 100
+@@ -2484,7 +2488,7 @@
          self.OnUpdateSelection(event)
  
      def OnUpdateDialog(self, event):
@@ -4585,16 +4690,17 @@ Index: gui/wxpython/gui_core/gselect.py
  
  import wx
  
-@@ -83,7 +84,7 @@
+@@ -83,7 +84,8 @@
  from core.settings import UserSettings
  from core.debug import Debug
  from gui_core.vselect import VectorSelectBase
 -from gui_core.wrap import TreeCtrl
-+from gui_core.wrap import TreeCtrl, Button, StaticText, StaticBox
++from gui_core.wrap import TreeCtrl, Button, StaticText, StaticBox, \
++    TextCtrl
  
  from grass.pydispatch.signal import Signal
  
-@@ -526,7 +527,7 @@
+@@ -526,7 +528,7 @@
  
          # add extra items first
          if self.extraItems:
@@ -4603,7 +4709,7 @@ Index: gui/wxpython/gui_core/gselect.py
                  node = self.AddItem(group, node=True)
                  self.seltree.SetItemTextColour(node, wx.Colour(50, 50, 200))
                  for item in items:
-@@ -804,7 +805,7 @@
+@@ -804,7 +806,7 @@
  
      def _CheckDBConnection(self):
          """Check DB connection"""
@@ -4612,7 +4718,7 @@ Index: gui/wxpython/gui_core/gselect.py
          # if map is not defined (happens with vnet initialization) or it
          # doesn't exist
          try:
-@@ -989,7 +990,7 @@
+@@ -989,7 +991,7 @@
          self.SetStringSelection(value)
  
  
@@ -4621,7 +4727,7 @@ Index: gui/wxpython/gui_core/gselect.py
      """Creates combo box for selecting database driver.
      """
  
-@@ -1124,16 +1125,16 @@
+@@ -1124,16 +1126,16 @@
              columnchoices = dbInfo.GetTableDesc(table)
              keyColumn = dbInfo.GetKeyColumn(layer)
              self.columns = len(columnchoices.keys()) * ['']
@@ -4641,7 +4747,7 @@ Index: gui/wxpython/gui_core/gselect.py
                      if value['type'] not in type:
                          try:
                              self.columns.remove(key)
-@@ -1398,7 +1399,7 @@
+@@ -1398,7 +1400,7 @@
  
          self.reloadDataRequired = Signal('GdalSelect.reloadDataRequired')
  
@@ -4650,7 +4756,7 @@ Index: gui/wxpython/gui_core/gselect.py
          if dest:
              self.inputBox.SetLabel(" %s " % _("Output settings"))
          else:
-@@ -1502,7 +1503,7 @@
+@@ -1502,7 +1504,7 @@
              fileMask=fileMask)
          browse.GetChildren()[1].SetName('GdalSelectDataSource')
          self.fileWidgets['browse'] = browse
@@ -4659,7 +4765,7 @@ Index: gui/wxpython/gui_core/gselect.py
  
          # directory
          self.dirPanel = wx.Panel(parent=self)
-@@ -1527,11 +1528,11 @@
+@@ -1527,11 +1529,11 @@
                  self.dirWidgets['format'].GetStringSelection()))
          formatSelect.Bind(wx.EVT_CHOICE, self.OnUpdate)
  
@@ -4674,7 +4780,7 @@ Index: gui/wxpython/gui_core/gselect.py
          if self.ogr:
              shapefile = 'ESRI Shapefile'
              if shapefile in fileFormats:
-@@ -1568,12 +1569,12 @@
+@@ -1568,12 +1570,12 @@
          self.dbWidgets['choice'] = wx.Choice(
              parent=self.dbPanel, name='GdalSelectDataSource')
          self.dbWidgets['choice'].Bind(wx.EVT_CHOICE, self.OnUpdate)
@@ -4690,7 +4796,7 @@ Index: gui/wxpython/gui_core/gselect.py
              parent=self.dbPanel, label=_("Name:"))
          self.dbWidgets['featType'] = wx.RadioBox(
              parent=self.dbPanel,
-@@ -1599,7 +1600,7 @@
+@@ -1599,7 +1601,7 @@
              startDirectory=os.getcwd(),
              changeCallback=self.OnUpdate)
          self.dbWidgets['dirbrowse'] = browse
@@ -4699,7 +4805,7 @@ Index: gui/wxpython/gui_core/gselect.py
  
          # protocol
          self.protocolPanel = wx.Panel(parent=self)
-@@ -1609,9 +1610,9 @@
+@@ -1609,9 +1611,9 @@
              choices=protocolFormats)
          self.protocolWidgets['format'] = protocolChoice
  
@@ -4711,7 +4817,7 @@ Index: gui/wxpython/gui_core/gselect.py
              parent=self.protocolPanel)
  
          # native
-@@ -1647,7 +1648,7 @@
+@@ -1647,7 +1649,7 @@
                      dsn = v
                      break
              optList = list()
@@ -4720,7 +4826,7 @@ Index: gui/wxpython/gui_core/gselect.py
                  if k in ('format', 'conninfo', 'topology'):
                      continue
                  optList.append('%s=%s' % (k, v))
-@@ -1692,8 +1693,8 @@
+@@ -1692,8 +1694,8 @@
          sizer.Add(paddingSizer, flag=wx.EXPAND, pos=(0, 0), span=(1, 2))
          sizer.AddGrowableCol(0)
          if self.dest:
@@ -4731,7 +4837,7 @@ Index: gui/wxpython/gui_core/gselect.py
                        flag=wx.ALIGN_CENTER_VERTICAL,
                        pos=(1, 0))
              sizer.Add(self.fileWidgets['options'],
-@@ -1706,8 +1707,8 @@
+@@ -1706,8 +1708,8 @@
  
          # directory
          sizer = wx.GridBagSizer(vgap=3, hgap=10)
@@ -4742,7 +4848,7 @@ Index: gui/wxpython/gui_core/gselect.py
                    flag=wx.ALIGN_CENTER_VERTICAL,
                    pos=(0, 0))
          sizer.Add(self.dirWidgets['format'],
-@@ -1723,14 +1724,14 @@
+@@ -1723,14 +1725,14 @@
                    flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
                    pos=(1, 0), span=(1, 4))
          if self.dest:
@@ -4760,7 +4866,7 @@ Index: gui/wxpython/gui_core/gselect.py
              helpBtn.Bind(wx.EVT_BUTTON, self.OnHelp)
              sizer.Add(helpBtn,
                        flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
-@@ -1745,8 +1746,8 @@
+@@ -1745,8 +1747,8 @@
  
          # database
          sizer = wx.GridBagSizer(vgap=1, hgap=5)
@@ -4771,7 +4877,7 @@ Index: gui/wxpython/gui_core/gselect.py
                    flag=wx.ALIGN_CENTER_VERTICAL,
                    pos=(0, 0))
          sizer.Add(self.dbWidgets['format'],
-@@ -1774,8 +1775,8 @@
+@@ -1774,8 +1776,8 @@
              sizer.Add(self.dbWidgets['featType'],
                        pos=(0, 2), flag=wx.EXPAND)
  
@@ -4782,7 +4888,7 @@ Index: gui/wxpython/gui_core/gselect.py
                        flag=wx.ALIGN_CENTER_VERTICAL,
                        pos=(5, 0))
              sizer.Add(self.dbWidgets['options'],
-@@ -1783,7 +1784,7 @@
+@@ -1783,7 +1785,7 @@
                        pos=(5, 1), span=(1, 2))
  
              # help button
@@ -4791,7 +4897,7 @@ Index: gui/wxpython/gui_core/gselect.py
              helpBtn.Bind(wx.EVT_BUTTON, self.OnHelp)
              sizer.Add(helpBtn,
                        pos=(5, 3))
-@@ -1797,15 +1798,15 @@
+@@ -1797,15 +1799,15 @@
  
          # protocol
          sizer = wx.GridBagSizer(vgap=3, hgap=3)
@@ -4811,7 +4917,7 @@ Index: gui/wxpython/gui_core/gselect.py
                    flag=wx.ALIGN_CENTER_VERTICAL,
                    pos=(1, 0))
          sizer.Add(self.protocolWidgets['text'],
-@@ -1812,8 +1813,8 @@
+@@ -1812,8 +1814,8 @@
                    flag=wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
                    pos=(1, 1))
          if self.dest:
@@ -4822,7 +4928,7 @@ Index: gui/wxpython/gui_core/gselect.py
                        flag=wx.ALIGN_CENTER_VERTICAL,
                        pos=(2, 0))
              sizer.Add(self.protocolWidgets['options'],
-@@ -1827,8 +1828,8 @@
+@@ -1827,8 +1829,8 @@
  
          # native
          sizer = wx.BoxSizer(wx.VERTICAL)
@@ -4833,7 +4939,7 @@ Index: gui/wxpython/gui_core/gselect.py
                    flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, border=5)
          self.nativePanel.SetSizer(sizer)
  
-@@ -2337,9 +2338,9 @@
+@@ -2337,9 +2339,9 @@
      def _layout(self):
          """Do layout"""
          sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -4846,7 +4952,7 @@ Index: gui/wxpython/gui_core/gselect.py
                    proportion=1,
                    flag=wx.ALIGN_CENTER_VERTICAL,
                    border=5)
-@@ -2380,9 +2381,9 @@
+@@ -2380,9 +2382,9 @@
  
          super(CoordinatesSelect, self).__init__(parent=parent, id=wx.ID_ANY)
  
@@ -4859,7 +4965,7 @@ Index: gui/wxpython/gui_core/gselect.py
  
          icon = wx.Bitmap(
              os.path.join(
-@@ -2522,8 +2523,8 @@
+@@ -2522,8 +2524,8 @@
  
          self.mapdisp = self.giface.GetMapDisplay()
  
@@ -4870,7 +4976,7 @@ Index: gui/wxpython/gui_core/gselect.py
  
          icon = wx.Bitmap(
              os.path.join(
-@@ -2712,8 +2713,8 @@
+@@ -2712,8 +2714,8 @@
          super(SqlWhereSelect, self).__init__(parent=parent, id=wx.ID_ANY)
          self.parent = parent
  
@@ -5721,10 +5827,23 @@ Index: gui/wxpython/gui_core/wrap.py
 ===================================================================
 --- gui/wxpython/gui_core/wrap.py	(revision 73002)
 +++ gui/wxpython/gui_core/wrap.py	(working copy)
-@@ -99,6 +99,19 @@
+@@ -99,6 +99,32 @@
              wx.Button.SetToolTipString(self, tip)
  
  
++class RadioButton(wx.RadioButton):
++    """Wrapper around wx.RadioButton to have more control
++    over the widget on different platforms/wxpython versions"""
++    def __init__(self, *args, **kwargs):
++        wx.RadioButton.__init__(self, *args, **kwargs)
++
++    def SetToolTip(self, tip):
++        if wxPythonPhoenix:
++            wx.RadioButton.SetToolTip(self, tipString=tip)
++        else:
++            wx.RadioButton.SetToolTipString(self, tip)
++
++
 +class BitmapButton(wx.BitmapButton):
 +    """Wrapper around wx.BitmapButton to have more control
 +    over the widget on different platforms/wxpython versions"""
@@ -5741,7 +5860,7 @@ Index: gui/wxpython/gui_core/wrap.py
  class GenBitmapButton(buttons.GenBitmapButton):
      """Wrapper around GenBitmapButton to have more control
      over the widget on different platforms/wxpython versions"""
-@@ -151,6 +164,19 @@
+@@ -151,6 +177,19 @@
              wx.StaticBox.SetToolTipString(self, tip)
  
  
@@ -5761,6 +5880,23 @@ Index: gui/wxpython/gui_core/wrap.py
  class TextCtrl(wx.TextCtrl):
      """Wrapper around wx.TextCtrl to have more control
      over the widget on different platforms/wxpython versions"""
+@@ -319,3 +358,16 @@
+             wx.CheckBox.SetToolTip(self, tipString=tip)
+         else:
+             wx.CheckBox.SetToolTipString(self, tip)
++
++
++class Choice(wx.Choice):
++    """Wrapper around wx.Choice to have more control
++    over the widget on different platforms/wxpython versions"""
++    def __init__(self, *args, **kwargs):
++        wx.Choice.__init__(self, *args, **kwargs)
++
++    def SetToolTip(self, tip):
++        if wxPythonPhoenix:
++            wx.Choice.SetToolTip(self, tipString=tip)
++        else:
++            wx.Choice.SetToolTipString(self, tip)
 Index: gui/wxpython/gui_core/wxlibplot.py
 ===================================================================
 --- gui/wxpython/gui_core/wxlibplot.py	(revision 73002)
