@@ -794,8 +794,15 @@ Index: gui/wxpython/core/utils.py
  
  from grass.script import core as grass
  from grass.script import task as gtask
-@@ -46,7 +47,7 @@
+@@ -44,9 +45,14 @@
+     _ = null_gettext
  
+ 
++def cmp(a, b):
++    """cmp function"""
++    return ((a > b) - (a < b))
++
++
  def normalize_whitespace(text):
      """Remove redundant whitespace from a string"""
 -    return string.join(string.split(text), ' ')
@@ -803,7 +810,7 @@ Index: gui/wxpython/core/utils.py
  
  
  def split(s):
-@@ -324,7 +325,10 @@
+@@ -324,7 +330,10 @@
  
  def ListSortLower(list):
      """Sort list items (not case-sensitive)"""
@@ -815,7 +822,7 @@ Index: gui/wxpython/core/utils.py
  
  
  def GetVectorNumberOfLayers(vector):
-@@ -731,7 +735,7 @@
+@@ -731,7 +740,7 @@
          else:
              formats['file'].append(name)
  
@@ -824,7 +831,7 @@ Index: gui/wxpython/core/utils.py
          items.sort()
  
      return formats
-@@ -917,7 +921,7 @@
+@@ -917,7 +926,7 @@
      else:
          expCmd = 'export'
  
@@ -1153,17 +1160,57 @@ Index: gui/wxpython/dbmgr/base.py
 ===================================================================
 --- gui/wxpython/dbmgr/base.py	(revision 73002)
 +++ gui/wxpython/dbmgr/base.py	(working copy)
-@@ -60,7 +60,8 @@
+@@ -36,6 +36,7 @@
+ import copy
+ import types
+ import math
++import functools
+ 
+ from core import globalvar
+ import wx
+@@ -51,6 +52,7 @@
+ import wx.lib.scrolledpanel as scrolled
+ 
+ import grass.script as grass
++from grass.script.utils import decode
+ 
+ from dbmgr.sqlbuilder import SQLBuilderSelect, SQLBuilderUpdate
+ from core.gcmd import RunCommand, GException, GError, GMessage, GWarning
+@@ -60,9 +62,14 @@
  from core.debug import Debug
  from dbmgr.dialogs import ModifyTableRecord, AddColumnDialog
  from core.settings import UserSettings
 -from gui_core.wrap import SpinCtrl, Button, TextCtrl, ListCtrl, CheckBox
 +from gui_core.wrap import SpinCtrl, Button, TextCtrl, ListCtrl, CheckBox, \
 +    StaticText, StaticBox, Menu
++from core.utils import cmp
  
++if sys.version_info.major >= 3:
++    unicode = str
  
++
  class Log:
-@@ -431,7 +432,7 @@
+     """The log output SQL is redirected to the status bar of the
+     containing frame.
+@@ -268,7 +275,7 @@
+             # but we need strip to get rid of the ending newline
+             # which on windows leaves \r in a last empty attribute table cell
+             # and causes error
+-            record = outFile.readline().strip().replace('\n', '')
++            record = decode(outFile.readline().strip()).replace('\n', '')
+ 
+             if not record:
+                 break
+@@ -332,7 +339,7 @@
+             cat = i + 1
+ 
+         for value in record:
+-            if self.columns[columns[j]]['ctype'] != types.StringType:
++            if self.columns[columns[j]]['ctype'] != str:
+                 try:
+                     # casting disabled (2009/03)
+                     # self.itemDataMap[i].append(self.columns[columns[j]]['ctype'](value))
+@@ -431,7 +438,7 @@
          """Column heading right mouse button -> pop-up menu"""
          self._col = event.GetColumn()
  
@@ -1172,7 +1219,7 @@ Index: gui/wxpython/dbmgr/base.py
  
          if not hasattr(self, "popupID"):
              self.popupId = {'sortAsc': wx.NewId(),
-@@ -452,7 +453,7 @@
+@@ -452,7 +459,7 @@
          popupMenu.Append(self.popupId['sortAsc'], text=_("Sort ascending"))
          popupMenu.Append(self.popupId['sortDesc'], text=_("Sort descending"))
          popupMenu.AppendSeparator()
@@ -1181,7 +1228,27 @@ Index: gui/wxpython/dbmgr/base.py
          popupMenu.AppendMenu(self.popupId['calculate'], _(
              "Calculate (only numeric columns)"), subMenu)
          popupMenu.Append(
-@@ -1119,7 +1120,7 @@
+@@ -641,7 +648,7 @@
+         """Sort items"""
+         wx.BeginBusyCursor()
+         items = list(self.itemDataMap.keys())
+-        items.sort(self.Sorter)
++        items.sort(key=functools.cmp_to_key(self.Sorter))
+         self.itemIndexMap = items
+ 
+         # redraw the list
+@@ -661,8 +668,8 @@
+             item2 = self.itemDataMap[key2][self._col]
+ 
+         if isinstance(
+-                item1, types.StringType) or isinstance(
+-                item2, types.StringTypes):
++                item1, str) or isinstance(
++                item2, unicode):
+             cmpVal = locale.strcoll(GetUnicodeValue(item1), GetUnicodeValue(item2))
+         else:
+             cmpVal = cmp(item1, item2)
+@@ -1119,7 +1126,7 @@
          #   controls that are placed IN the wx.StaticBox, or it will freeze
          #   on the Mac
  
@@ -1190,7 +1257,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=panel, id=wx.ID_ANY, label=" %s " %
              _("Attribute data - right-click to edit/manage records"))
          listSizer = wx.StaticBoxSizer(listBox, wx.VERTICAL)
-@@ -1151,8 +1152,8 @@
+@@ -1151,8 +1158,8 @@
          sqlQueryPanel = wx.Panel(parent=panel, id=wx.ID_ANY)
  
          # attribute data
@@ -1201,7 +1268,7 @@ Index: gui/wxpython/dbmgr/base.py
  
          sqlSizer = wx.StaticBoxSizer(sqlBox, wx.VERTICAL)
  
-@@ -1215,7 +1216,7 @@
+@@ -1215,7 +1222,7 @@
              _("Example: %s") %
              "MULTILANE = 'no' AND OBJECTID < 10")
  
@@ -1210,7 +1277,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=simpleSqlPanel,
              id=wx.ID_ANY,
              label="SELECT * FROM %s WHERE " %
-@@ -1225,7 +1226,7 @@
+@@ -1225,7 +1232,7 @@
          sqlNtb.AddPage(page=advancedSqlPanel,
                         text=_('Builder'))
  
@@ -1219,7 +1286,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=advancedSqlPanel,
              id=wx.ID_ANY,
              label=_("SQL Builder"))
-@@ -1404,7 +1405,7 @@
+@@ -1404,7 +1411,7 @@
  
          tlist = self.FindWindowById(self.layerPage[self.selLayer]['data'])
          # generate popup-menu
@@ -1228,7 +1295,25 @@ Index: gui/wxpython/dbmgr/base.py
          menu.Append(self.popupDataID1, _("Edit selected record"))
          selected = tlist.GetFirstSelected()
          if not self.dbMgrData[
-@@ -2274,8 +2275,8 @@
+@@ -1778,7 +1785,7 @@
+         else:
+             fn = tlist.GetItems
+ 
+-        cats = map(int, fn())
++        cats = list(map(int, fn()))
+ 
+         digitToolbar = None
+         if 'vdigit' in self.mapdisplay.toolbars:
+@@ -1980,7 +1987,7 @@
+             if digitToolbar and digitToolbar.GetLayer() and digitToolbar.GetLayer(
+             ).GetName() == self.dbMgrData['vectName']:
+                 display = self.mapdisplay.GetMapWindow().GetDisplay()
+-                display.SetSelected(map(int, cats), layer=self.selLayer)
++                display.SetSelected(list(map(int, cats)), layer=self.selLayer)
+                 self.mapdisplay.MapWindow.UpdateMap(
+                     render=True, renderVector=True)
+ 
+@@ -2274,8 +2281,8 @@
          #
          # dbInfo
          #
@@ -1239,7 +1324,7 @@ Index: gui/wxpython/dbmgr/base.py
          dbSizer = wx.StaticBoxSizer(dbBox, wx.VERTICAL)
          dbSizer.Add(
              CreateDbInfoDesc(
-@@ -2290,7 +2291,7 @@
+@@ -2290,7 +2297,7 @@
          # table description
          #
          table = self.dbMgrData['mapDBInfo'].layers[layer]['table']
@@ -1248,7 +1333,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=panel,
              id=wx.ID_ANY,
              label=" %s " %
-@@ -2305,17 +2306,17 @@
+@@ -2305,17 +2312,17 @@
          self.layerPage[layer]['tableData'] = tlist.GetId()
  
          # manage columns (add)
@@ -1271,7 +1356,7 @@ Index: gui/wxpython/dbmgr/base.py
                  parent=panel,
                  id=wx.ID_ANY,
                  label=_("Column")),
-@@ -2334,7 +2335,7 @@
+@@ -2334,7 +2341,7 @@
          ctype.Bind(wx.EVT_CHOICE, self.OnTableChangeType)
          self.layerPage[layer]['addColType'] = ctype.GetId()
          addSizer.Add(
@@ -1280,7 +1365,7 @@ Index: gui/wxpython/dbmgr/base.py
                  parent=panel,
                  id=wx.ID_ANY,
                  label=_("Type")),
-@@ -2350,7 +2351,7 @@
+@@ -2350,7 +2357,7 @@
          length.Enable(False)
          self.layerPage[layer]['addColLength'] = length.GetId()
          addSizer.Add(
@@ -1289,7 +1374,7 @@ Index: gui/wxpython/dbmgr/base.py
                  parent=panel,
                  id=wx.ID_ANY,
                  label=_("Length")),
-@@ -2360,7 +2361,7 @@
+@@ -2360,7 +2367,7 @@
                       flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT,
                       border=5)
  
@@ -1298,7 +1383,7 @@ Index: gui/wxpython/dbmgr/base.py
          btnAddCol.Bind(wx.EVT_BUTTON, self.OnTableItemAdd)
          btnAddCol.Enable(False)
          self.layerPage[layer]['addColButton'] = btnAddCol.GetId()
-@@ -2368,8 +2369,8 @@
+@@ -2368,8 +2375,8 @@
                       border=3)
  
          # manage columns (rename)
@@ -1309,7 +1394,7 @@ Index: gui/wxpython/dbmgr/base.py
          renameSizer = wx.StaticBoxSizer(renameBox, wx.HORIZONTAL)
  
          columnFrom = wx.ComboBox(
-@@ -2379,7 +2380,7 @@
+@@ -2379,7 +2386,7 @@
          columnFrom.SetSelection(0)
          self.layerPage[layer]['renameCol'] = columnFrom.GetId()
          renameSizer.Add(
@@ -1318,7 +1403,7 @@ Index: gui/wxpython/dbmgr/base.py
                  parent=panel,
                  id=wx.ID_ANY,
                  label=_("Column")),
-@@ -2389,13 +2390,13 @@
+@@ -2389,13 +2396,13 @@
                          flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT,
                          border=5)
  
@@ -1335,7 +1420,7 @@ Index: gui/wxpython/dbmgr/base.py
                  parent=panel,
                  id=wx.ID_ANY,
                  label=_("To")),
-@@ -2405,7 +2406,7 @@
+@@ -2405,7 +2412,7 @@
                          flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT,
                          border=5)
  
@@ -1344,7 +1429,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=panel,
              id=wx.ID_ANY,
              label=_("&Rename"))
-@@ -2580,7 +2581,7 @@
+@@ -2580,7 +2587,7 @@
              self.Bind(wx.EVT_MENU, self.OnTableReload, id=self.popupTableID3)
  
          # generate popup-menu
@@ -1353,7 +1438,7 @@ Index: gui/wxpython/dbmgr/base.py
          menu.Append(self.popupTableID1, _("Drop selected column"))
          if self.FindWindowById(self.layerPage[self.selLayer][
                                 'tableData']).GetFirstSelected() == -1:
-@@ -2766,8 +2767,8 @@
+@@ -2766,8 +2773,8 @@
          panelList = wx.Panel(parent=splitterWin, id=wx.ID_ANY)
  
          panelListSizer = wx.BoxSizer(wx.VERTICAL)
@@ -1364,7 +1449,25 @@ Index: gui/wxpython/dbmgr/base.py
          layerSizer = wx.StaticBoxSizer(layerBox, wx.VERTICAL)
  
          self.layerList = self._createLayerDesc(panelList)
-@@ -3063,8 +3064,8 @@
+@@ -2838,7 +2845,7 @@
+         self.layerList.Update(self.dbMgrData['mapDBInfo'].layers)
+         self.layerList.Populate(update=True)
+         # update selected widgets
+-        listOfLayers = map(str, self.dbMgrData['mapDBInfo'].layers.keys())
++        listOfLayers = list(map(str, self.dbMgrData['mapDBInfo'].layers.keys()))
+         # delete layer page
+         self.manageLayerBook.deleteLayer.SetItems(listOfLayers)
+         if len(listOfLayers) > 0:
+@@ -3026,7 +3033,7 @@
+                              read=True,
+                              quiet=True)
+ 
+-        for line in connect.splitlines():
++        for line in decode(connect).splitlines():
+             item, value = line.split(':', 1)
+             self.defaultConnect[item.strip()] = value.strip()
+ 
+@@ -3063,8 +3070,8 @@
  
          # layer description
  
@@ -1375,7 +1478,7 @@ Index: gui/wxpython/dbmgr/base.py
          layerSizer = wx.StaticBoxSizer(layerBox, wx.VERTICAL)
  
          #
-@@ -3071,30 +3072,30 @@
+@@ -3071,30 +3078,30 @@
          # list of layer widgets (label, value)
          #
          self.addLayerWidgets = {'layer':
@@ -1419,7 +1522,7 @@ Index: gui/wxpython/dbmgr/base.py
                                       wx.Choice(parent=self.addPanel, id=wx.ID_ANY, size=(200, -1),
                                                 choices=self.defaultColumns)),
                                  'addCat':
-@@ -3124,8 +3125,8 @@
+@@ -3124,8 +3131,8 @@
              _("You need to add categories " "by v.category module."))
  
          # table description
@@ -1430,7 +1533,7 @@ Index: gui/wxpython/dbmgr/base.py
          tableSizer = wx.StaticBoxSizer(tableBox, wx.VERTICAL)
  
          #
-@@ -3132,30 +3133,30 @@
+@@ -3132,30 +3139,30 @@
          # list of table widgets
          #
          keyCol = UserSettings.Get(group='atm', key='keycolumn', subkey='value')
@@ -1474,7 +1577,7 @@ Index: gui/wxpython/dbmgr/base.py
                                 size=(125, -1))
          btnDefault.Bind(wx.EVT_BUTTON, self.OnSetDefault)
  
-@@ -3261,8 +3262,8 @@
+@@ -3261,13 +3268,13 @@
          self.deletePanel = wx.Panel(parent=self, id=wx.ID_ANY)
          self.AddPage(page=self.deletePanel, text=_("Remove layer"))
  
@@ -1485,7 +1588,13 @@ Index: gui/wxpython/dbmgr/base.py
  
          self.deleteLayer = wx.ComboBox(
              parent=self.deletePanel, id=wx.ID_ANY, size=(100, -1),
-@@ -3287,7 +3288,7 @@
+             style=wx.CB_SIMPLE | wx.CB_READONLY,
+-            choices=map(str, self.mapDBInfo.layers.keys()))
++            choices=list(map(str, self.mapDBInfo.layers.keys())))
+         self.deleteLayer.SetSelection(0)
+         self.deleteLayer.Bind(wx.EVT_COMBOBOX, self.OnChangeLayer)
+ 
+@@ -3287,7 +3294,7 @@
              self.deleteLayer.Enable(False)
              self.deleteTable.Enable(False)
  
@@ -1494,7 +1603,7 @@ Index: gui/wxpython/dbmgr/base.py
              self.deletePanel, wx.ID_DELETE, _("&Remove layer"),
              size=(125, -1))
          btnDelete.Bind(wx.EVT_BUTTON, self.OnDeleteLayer)
-@@ -3337,8 +3338,8 @@
+@@ -3337,34 +3344,34 @@
          # list of layer widgets (label, value)
          #
          self.modifyLayerWidgets = {'layer':
@@ -1505,9 +1614,10 @@ Index: gui/wxpython/dbmgr/base.py
                                      wx.ComboBox(parent=self.modifyPanel, id=wx.ID_ANY,
                                                  size=(100, -1),
                                                  style=wx.CB_SIMPLE | wx.CB_READONLY,
-@@ -3345,26 +3346,26 @@
-                                                 choices=map(str,
-                                                             self.mapDBInfo.layers.keys()))),
+-                                                choices=map(str,
+-                                                            self.mapDBInfo.layers.keys()))),
++                                                choices=list(map(str,
++                                                            self.mapDBInfo.layers.keys())))),
                                     'driver':
 -                                       (wx.StaticText(parent=self.modifyPanel, id=wx.ID_ANY,
 -                                                      label='%s:' % _("Driver")),
@@ -1543,7 +1653,7 @@ Index: gui/wxpython/dbmgr/base.py
                                          wx.Choice(parent=self.modifyPanel, id=wx.ID_ANY,
                                                    size=(200, -1),
                                                    choices=self.defaultColumns))}
-@@ -3406,7 +3407,7 @@
+@@ -3406,7 +3413,7 @@
          # self.modifyLayerWidgets['database'][1].Bind(wx.EVT_TEXT_ENTER, self.OnDatabaseChanged)
          # self.modifyLayerWidgets['table'][1].Bind(wx.EVT_CHOICE, self.OnTableChanged)
  
@@ -1552,7 +1662,25 @@ Index: gui/wxpython/dbmgr/base.py
              self.modifyPanel, wx.ID_DELETE, _("&Modify layer"),
              size=(125, -1))
          btnModify.Bind(wx.EVT_BUTTON, self.OnModifyLayer)
-@@ -3782,7 +3783,7 @@
+@@ -3461,7 +3468,7 @@
+ 
+             return tables
+ 
+-        for table in ret.splitlines():
++        for table in decode(ret).splitlines():
+             tables.append(table)
+ 
+         return tables
+@@ -3481,7 +3488,7 @@
+         if ret is None:
+             return columns
+ 
+-        for column in ret.splitlines():
++        for column in decode(ret).splitlines():
+             columns.append(column)
+ 
+         return columns
+@@ -3782,7 +3789,7 @@
  
          self.sp = scrolled.ScrolledPanel(parent=self.panel, id=wx.ID_ANY, size=(
              250, 150), style=wx.TAB_TRAVERSAL | wx.SUNKEN_BORDER, name="Statistics")
@@ -1561,7 +1689,7 @@ Index: gui/wxpython/dbmgr/base.py
              parent=self.sp,
              id=wx.ID_ANY,
              style=wx.TE_MULTILINE | wx.TE_READONLY)
-@@ -3792,7 +3793,7 @@
+@@ -3792,7 +3799,7 @@
          self.btnClipboard = Button(parent=self.panel, id=wx.ID_COPY)
          self.btnClipboard.SetToolTip(
              _("Copy statistics the clipboard (Ctrl+C)"))
@@ -1570,6 +1698,24 @@ Index: gui/wxpython/dbmgr/base.py
          self.btnCancel.SetDefault()
  
          # bindings
+@@ -3889,7 +3896,7 @@
+             self.Close()
+             return
+ 
+-        dataLines = dataStr.splitlines()
++        dataLines = decode(dataStr).splitlines()
+         if len(dataLines) != len(stats):
+             GError(
+                 parent=self.parent, message=_(
+@@ -3915,7 +3922,7 @@
+             GWarning(parent=self.parent,
+                      message=_("Unable to calculte standard deviation."))
+         varSum = 0
+-        for var in dataVar.splitlines():
++        for var in deocde(dataVar).splitlines():
+             varSum += float(var)
+         stddev = math.sqrt(varSum / count)
+ 
 Index: gui/wxpython/dbmgr/dialogs.py
 ===================================================================
 --- gui/wxpython/dbmgr/dialogs.py	(revision 73002)
