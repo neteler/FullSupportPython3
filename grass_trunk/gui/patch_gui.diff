@@ -12291,7 +12291,7 @@ Index: gui/wxpython/psmap/dialogs.py
              parent=panel, id=wx.ID_ANY, label=" %s " %
              _("Vector label files created beforehand by v.label module"))
          sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
-@@ -6940,7 +6941,7 @@
+@@ -6940,11 +6941,11 @@
              proportion=1,
              flag=wx.EXPAND | wx.ALL,
              border=5)
@@ -12300,6 +12300,11 @@ Index: gui/wxpython/psmap/dialogs.py
              panel, id=wx.ID_ANY,
              label=_("You can select multiple label files."))
          helpText.SetForegroundColour(
+-            wx.SystemSettings_GetColour(
++            wx.SystemSettings.GetColour(
+                 wx.SYS_COLOUR_GRAYTEXT))
+         sizer.Add(
+             helpText,
 Index: gui/wxpython/psmap/frame.py
 ===================================================================
 --- gui/wxpython/psmap/frame.py	(revision 73002)
@@ -12415,6 +12420,15 @@ Index: gui/wxpython/psmap/frame.py
                      self.Draw(
                          pen=self.pen['map'],
                          brush=self.brush['map'],
+@@ -1897,7 +1900,7 @@
+ 
+                     # update paper coordinates
+                     points[self.currentLinePoint] = self.CanvasPaperCoordinates(
+-                        rect=wx.RectPS(pos, (0, 0)), canvasToPaper=True)[:2]
++                        rect=Rect(pos, (0, 0)), canvasToPaper=True)[:2]
+ 
+                 self.RedrawSelectBox(self.dragId)
+ 
 @@ -2149,7 +2152,7 @@
          self.Zoom(zoomFactor, view)
  
@@ -12424,9 +12438,12 @@ Index: gui/wxpython/psmap/frame.py
          """Draw object with given pen and brush.
  
          :param pdc: PseudoDC
-@@ -2193,15 +2196,15 @@
+@@ -2191,17 +2194,17 @@
+             dc.SetFont(font)
+             pdc.SetFont(font)
              text = '\n'.join(self.itemLabels[drawid])
-             w, h, lh = dc.GetMultiLineTextExtent(text)
+-            w, h, lh = dc.GetMultiLineTextExtent(text)
++            w, h = dc.GetMultiLineTextExtent(text)
              textExtent = (w, h)
 -            textRect = wx.Rect(0, 0, *textExtent).CenterIn(bb)
 +            textRect = Rect(0, 0, *textExtent).CenterIn(bb)
@@ -12461,6 +12478,28 @@ Index: gui/wxpython/psmap/frame.py
  
          return imageRect
  
+@@ -2404,7 +2407,7 @@
+             # draw small marks signalizing resizing
+             if self.instruction[id].type in ('map', 'rectangle'):
+                 controlP = self.pdcObj.GetIdBounds(id).GetBottomRight()
+-                rect = wx.RectPS(controlP, self.resizeBoxSize)
++                rect = Rect(controlP, self.resizeBoxSize)
+                 self.Draw(
+                     pen=self.pen['resize'],
+                     brush=self.brush['resize'],
+@@ -2421,9 +2424,9 @@
+                 p2Canvas = self.CanvasPaperCoordinates(
+                     rect=Rect2DPS(p2Paper, (0, 0)), canvasToPaper=False)[:2]
+                 rect = []
+-                box = wx.RectS(self.resizeBoxSize)
+-                rect.append(box.CenterIn(wx.RectPS(p1Canvas, wx.Size())))
+-                rect.append(box.CenterIn(wx.RectPS(p2Canvas, wx.Size())))
++                box = Rect(self.resizeBoxSize)
++                rect.append(box.CenterIn(Rect(p1Canvas, wx.Size())))
++                rect.append(box.CenterIn(Rect(p2Canvas, wx.Size())))
+                 for i, point in enumerate((p1Canvas, p2Canvas)):
+                     self.Draw(
+                         pen=self.pen['resize'],
 @@ -2495,11 +2498,11 @@
          # Make new off screen bitmap: this bitmap will always have the
          # current drawing in it, so it can be used to save the image
