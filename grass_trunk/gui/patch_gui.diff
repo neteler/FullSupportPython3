@@ -612,6 +612,27 @@ Index: gui/wxpython/animation/mapwindow.py
                                           self._overlay.GetHeight()))
          self._pdc.EndDrawing()
  
+Index: gui/wxpython/animation/provider.py
+===================================================================
+--- gui/wxpython/animation/provider.py	(revision 73002)
++++ gui/wxpython/animation/provider.py	(working copy)
+@@ -32,6 +32,7 @@
+ from core.utils import _, autoCropImageFromFile
+ 
+ from animation.utils import HashCmd, HashCmds, GetFileFromCmd, GetFileFromCmds
++from gui_core.wrap import EmptyBitmap
+ 
+ import grass.script.core as gcore
+ from grass.script.task import cmdlist_to_tuple
+@@ -802,7 +803,7 @@
+     """
+     Debug.msg(4, "createNoDataBitmap: w={w}, h={h}, text={t}".format(
+         w=imageWidth, h=imageHeight, t=text))
+-    bitmap = wx.EmptyBitmap(imageWidth, imageHeight)
++    bitmap = EmptyBitmap(imageWidth, imageHeight)
+     dc = wx.MemoryDC()
+     dc.SelectObject(bitmap)
+     dc.Clear()
 Index: gui/wxpython/animation/utils.py
 ===================================================================
 --- gui/wxpython/animation/utils.py	(revision 73002)
@@ -624,15 +645,16 @@ Index: gui/wxpython/animation/utils.py
  from multiprocessing import cpu_count
  try:
      from PIL import Image
-@@ -29,6 +30,7 @@
+@@ -29,6 +30,8 @@
  
  import grass.temporal as tgis
  import grass.script as grass
 +from grass.script.utils import encode
++from gui_core.wrap import EmptyBitmap
  
  from core.gcmd import GException
  from core.utils import _
-@@ -97,7 +99,7 @@
+@@ -97,7 +100,7 @@
                  raise GException(_("Map <%s> not found.") % name)
          else:
              found = False
@@ -641,7 +663,20 @@ Index: gui/wxpython/animation/utils.py
                  if name in mapNames:
                      found = True
                      newNames.append(name + "@" + mapset)
-@@ -278,7 +280,7 @@
+@@ -245,10 +248,10 @@
+ 
+ def RenderText(text, font, bgcolor, fgcolor):
+     """Renderes text with given font to bitmap."""
+-    dc = wx.MemoryDC(wx.EmptyBitmap(20, 20))
++    dc = wx.MemoryDC(EmptyBitmap(20, 20))
+     dc.SetFont(font)
+     w, h = dc.GetTextExtent(text)
+-    bmp = wx.EmptyBitmap(w + 2, h + 2)
++    bmp = EmptyBitmap(w + 2, h + 2)
+     dc.SelectObject(bmp)
+     dc.SetBackgroundMode(wx.SOLID)
+     dc.SetTextBackground(wx.Colour(*bgcolor))
+@@ -278,7 +281,7 @@
      name = '_'.join(cmd)
      if region:
          name += str(sorted(region.items()))
@@ -650,7 +685,7 @@ Index: gui/wxpython/animation/utils.py
  
  
  def HashCmds(cmds, region):
-@@ -286,7 +288,7 @@
+@@ -286,7 +289,7 @@
      name = ';'.join([item for sublist in cmds for item in sublist])
      if region:
          name += str(sorted(region.items()))
@@ -2949,10 +2984,21 @@ Index: gui/wxpython/gmodeler/frame.py
  from gmodeler.model import *
  from gmodeler.dialogs import *
 +from gui_core.wrap import Button, StaticText, StaticBox, TextCtrl, \
-+    Menu
++    Menu, StockCursor, EmptyBitmap
  
  wxModelDone, EVT_MODEL_DONE = NewEvent()
  
+@@ -89,8 +92,8 @@
+         self.randomness = 40  # random layout
+ 
+         self.cursors = {
+-            "default": wx.StockCursor(wx.CURSOR_ARROW),
+-            "cross": wx.StockCursor(wx.CURSOR_CROSS),
++            "default": StockCursor(wx.CURSOR_ARROW),
++            "cross": StockCursor(wx.CURSOR_CROSS),
+         }
+ 
+         wx.Frame.__init__(self, parent=parent, id=id, title=title, **kwargs)
 @@ -380,7 +383,7 @@
          dlg.Init(properties)
          if dlg.ShowModal() == wx.ID_OK:
@@ -2962,6 +3008,15 @@ Index: gui/wxpython/gmodeler/frame.py
                  properties[key] = value
              for action in self.model.GetItems(objType=ModelAction):
                  action.GetTask().set_flag('overwrite', properties['overwrite'])
+@@ -698,7 +701,7 @@
+                 ymaxImg = ymax
+         size = wx.Size(int(xmaxImg - xminImg) + 50,
+                        int(ymaxImg - yminImg) + 50)
+-        bitmap = wx.EmptyBitmap(width=size.width, height=size.height)
++        bitmap = EmptyBitmap(width=size.width, height=size.height)
+ 
+         filetype, ltype = GetImageHandlers(wx.ImageFromBitmap(bitmap))
+ 
 @@ -1495,7 +1498,7 @@
          shape = self.GetShape()
          self._onSelectShape(shape)
@@ -5909,10 +5964,19 @@ Index: gui/wxpython/gui_core/widgets.py
  from core.debug import Debug
 -from gui_core.wrap import Button, SearchCtrl
 +from gui_core.wrap import Button, SearchCtrl, StaticText, StaticBox, \
-+    TextCtrl, Menu, Rect
++    TextCtrl, Menu, Rect, EmptyBitmap
  
  
  class NotebookController:
+@@ -477,7 +479,7 @@
+         :param label: displayed label
+         """
+         size = (15, 15)
+-        buffer = wx.EmptyBitmap(*size)
++        buffer = EmptyBitmap(*size)
+         BitmapTextButton.__init__(self, parent=parent, label=" " + label,
+                                   bitmap=buffer, **kwargs)
+ 
 @@ -964,7 +966,7 @@
              self.Bind(wx.EVT_MENU, self.OnSelectNone, id=self.popupDataID2)
  
@@ -6051,11 +6115,29 @@ Index: gui/wxpython/gui_core/wxlibplot.py
  # Needs NumPy
  import numpy as np
  
-+from gui_core.wrap import Menu
++from gui_core.wrap import Menu, EmptyBitmap
 +
  from core.globalvar import CheckWxVersion
  if CheckWxVersion([3, 0, 0]):
      from wx import PENSTYLE_SOLID
+@@ -1538,7 +1540,7 @@
+         # Make new offscreen bitmap: this bitmap will always have the
+         # current drawing in it, so it can be used to save the image to
+         # a file, or whatever.
+-        self._Buffer = wx.EmptyBitmap(Size.width, Size.height)
++        self._Buffer = EmptyBitmap(Size.width, Size.height)
+         self._setSize()
+ 
+         if not self._isWindowCreated:
+@@ -1606,7 +1608,7 @@
+         width = self._Buffer.GetWidth()
+         height = self._Buffer.GetHeight()
+         if sys.platform != "darwin":
+-            tmp_Buffer = wx.EmptyBitmap(width, height)
++            tmp_Buffer = EmptyBitmap(width, height)
+             dcs = wx.MemoryDC()
+             dcs.SelectObject(tmp_Buffer)
+             dcs.Clear()
 @@ -2234,7 +2236,7 @@
          # Now Create the menu bar and items
          self.mainmenu = wx.MenuBar()
@@ -8133,6 +8215,15 @@ Index: gui/wxpython/mapwin/buffered.py
  
              self.pdc.DrawBitmap(self.bufferLast, 0, 0, False)
              self.pdc.DrawToDC(dc)
+@@ -715,7 +716,7 @@
+         renderMgr = self.Map.GetRenderMgr()
+         renderMgr.renderDone.disconnect(self._saveToFileDone)
+ 
+-        ibuffer = wx.EmptyBitmap(
++        ibuffer = EmptyBitmap(
+             max(1, self.Map.width),
+             max(1, self.Map.height))
+ 
 @@ -807,7 +808,7 @@
          else:
              img = None
@@ -8196,7 +8287,7 @@ Index: gui/wxpython/modules/colorrules.py
  from gui_core.widgets import ColorTablesComboBox
 -from gui_core.wrap import SpinCtrl, PseudoDC
 +from gui_core.wrap import SpinCtrl, PseudoDC, TextCtrl, Button, StaticText, \
-+    StaticBox
++    StaticBox, EmptyBitmap
  
  
  class RulesPanel:
@@ -8398,6 +8489,24 @@ Index: gui/wxpython/modules/colorrules.py
              if 'value' not in rule:  # skip empty rules
                  break
  
+@@ -1991,7 +1993,7 @@
+ 
+     def OnPaint(self, event):
+         """Draw pseudo DC to buffer"""
+-        self._Buffer = wx.EmptyBitmap(self.Map.width, self.Map.height)
++        self._Buffer = EmptyBitmap(self.Map.width, self.Map.height)
+         dc = wx.BufferedPaintDC(self, self._Buffer)
+ 
+         # use PrepareDC to set position correctly
+@@ -2019,7 +2021,7 @@
+         # Make new off screen bitmap: this bitmap will always have the
+         # current drawing in it, so it can be used to save the image to
+         # a file, or whatever.
+-        self._Buffer = wx.EmptyBitmap(self.Map.width, self.Map.height)
++        self._Buffer = EmptyBitmap(self.Map.width, self.Map.height)
+ 
+         # get the image to be rendered
+         self.img = self.GetImage()
 Index: gui/wxpython/modules/extensions.py
 ===================================================================
 --- gui/wxpython/modules/extensions.py	(revision 73002)
@@ -8521,10 +8630,37 @@ Index: gui/wxpython/modules/histogram.py
  from core.gcmd import GError
  from gui_core.toolbars import BaseToolbar, BaseIcons
 -from gui_core.wrap import PseudoDC
-+from gui_core.wrap import PseudoDC, Menu
++from gui_core.wrap import PseudoDC, Menu, EmptyBitmap
  
  
  class BufferedWindow(wx.Window):
+@@ -80,7 +80,7 @@
+ 
+         self.pdc = PseudoDC()
+         # will store an off screen empty bitmap for saving to file
+-        self._buffer = wx.EmptyBitmap(
++        self._buffer = EmptyBitmap(
+             max(1, self.Map.width),
+             max(1, self.Map.height))
+ 
+@@ -160,7 +160,7 @@
+         # Make new off screen bitmap: this bitmap will always have the
+         # current drawing in it, so it can be used to save the image to
+         # a file, or whatever.
+-        self._buffer = wx.EmptyBitmap(self.Map.width, self.Map.height)
++        self._buffer = EmptyBitmap(self.Map.width, self.Map.height)
+ 
+         # get the image to be rendered
+         self.img = self.GetImage()
+@@ -193,7 +193,7 @@
+         wx.Yield()
+ 
+         self.Map.ChangeMapSize((width, height))
+-        ibuffer = wx.EmptyBitmap(max(1, width), max(1, height))
++        ibuffer = EmptyBitmap(max(1, width), max(1, height))
+         self.Map.Render(force=True, windres=True)
+         img = self.GetImage()
+         self.Draw(self.pdc, img, drawid=99)
 @@ -496,7 +496,7 @@
          """Print options and output menu
          """
@@ -10827,7 +10963,7 @@ Index: gui/wxpython/psmap/dialogs.py
  from gui_core.dialogs import SymbolDialog
 -from gui_core.wrap import SpinCtrl
 +from gui_core.wrap import SpinCtrl, Button, TextCtrl, BitmapButton, \
-+    StaticText, StaticBox, Rect
++    StaticText, StaticBox, Rect, EmptyBitmap
  from psmap.utils import *
  from psmap.instructions import *
  
@@ -11744,6 +11880,15 @@ Index: gui/wxpython/psmap/dialogs.py
          self.sbCombo = wx.combo.BitmapComboBox(panel, style=wx.CB_READONLY)
          # only temporary, images must be moved away
          imagePath = os.path.join(
+@@ -4951,7 +4952,7 @@
+             globalvar.IMGDIR, "scalebar-simple.png")
+         for item, path in zip(['fancy', 'simple'], imagePath):
+             if not os.path.exists(path):
+-                bitmap = wx.EmptyBitmap(0, 0)
++                bitmap = EmptyBitmap(0, 0)
+             else:
+                 bitmap = wx.Bitmap(path)
+             self.sbCombo.Append(item='', bitmap=bitmap, clientData=item[0])
 @@ -4961,21 +4962,21 @@
          elif self.scalebarDict['scalebar'] == 's':
              self.sbCombo.SetSelection(1)
@@ -11944,6 +12089,33 @@ Index: gui/wxpython/psmap/dialogs.py
              parent=panel,
              id=wx.ID_ANY,
              label=" %s " %
+@@ -6082,7 +6083,7 @@
+ 
+     def DrawWarningText(self, warning):
+         """Draw text on preview window"""
+-        buffer = wx.EmptyBitmap(*self.previewSize)
++        buffer = EmptyBitmap(*self.previewSize)
+         dc = wx.MemoryDC()
+         dc.SelectObject(buffer)
+         dc.SetBrush(wx.Brush(wx.Colour(250, 250, 250)))
+@@ -6098,7 +6099,7 @@
+         """Draw bitmap, center it if smaller than preview size"""
+         if bitmap.GetWidth() <= self.previewSize[
+                 0] and bitmap.GetHeight() <= self.previewSize[1]:
+-            buffer = wx.EmptyBitmap(*self.previewSize)
++            buffer = EmptyBitmap(*self.previewSize)
+             dc = wx.MemoryDC()
+             dc.SelectObject(buffer)
+             dc.SetBrush(dc.GetBrush())
+@@ -6122,7 +6123,7 @@
+ 
+     def ClearPreview(self):
+         """Clear preview window"""
+-        buffer = wx.EmptyBitmap(*self.previewSize)
++        buffer = EmptyBitmap(*self.previewSize)
+         dc = wx.MemoryDC()
+         dc.SelectObject(buffer)
+         dc.SetBrush(wx.WHITE_BRUSH)
 @@ -6254,8 +6255,8 @@
          return os.path.join(gisbase, 'etc', 'paint', 'decorations')
  
@@ -12140,10 +12312,25 @@ Index: gui/wxpython/psmap/frame.py
  from gui_core.dialogs import HyperlinkDialog
  from gui_core.ghelp import ShowAboutDialog
 -from gui_core.wrap import PseudoDC
-+from gui_core.wrap import PseudoDC, Rect
++from gui_core.wrap import PseudoDC, Rect, StockCursor, EmptyBitmap
  from psmap.menudata import PsMapMenuData
  from gui_core.toolbars import ToolSwitcher
  
+@@ -103,10 +106,10 @@
+         }
+         # available cursors
+         self.cursors = {
+-            "default": wx.StockCursor(wx.CURSOR_ARROW),
+-            "cross": wx.StockCursor(wx.CURSOR_CROSS),
+-            "hand": wx.StockCursor(wx.CURSOR_HAND),
+-            "sizenwse": wx.StockCursor(wx.CURSOR_SIZENWSE)
++            "default": StockCursor(wx.CURSOR_ARROW),
++            "cross": StockCursor(wx.CURSOR_CROSS),
++            "hand": StockCursor(wx.CURSOR_HAND),
++            "sizenwse": StockCursor(wx.CURSOR_SIZENWSE)
+         }
+         # pen and brush
+         self.pen = {
 @@ -855,9 +858,9 @@
          if 0 < rotation < pi:
              Y = y - H
@@ -12156,6 +12343,15 @@ Index: gui/wxpython/psmap/frame.py
  
      def makePSFont(self, textDict):
          """creates a wx.Font object from selected postscript font. To be
+@@ -1255,7 +1258,7 @@
+         self.pdcImage = PseudoDC()
+ 
+         self.SetClientSize((700, 510))  # ?
+-        self._buffer = wx.EmptyBitmap(*self.GetClientSize())
++        self._buffer = EmptyBitmap(*self.GetClientSize())
+ 
+         self.idBoxTmp = wx.NewId()
+         self.idZoomBoxTmp = wx.NewId()
 @@ -1362,7 +1365,7 @@
  
          x = cW / 2 - pW / 2
@@ -12256,7 +12452,14 @@ Index: gui/wxpython/psmap/frame.py
  
          return imageRect
  
-@@ -2501,5 +2504,5 @@
+@@ -2495,11 +2498,11 @@
+         # Make new off screen bitmap: this bitmap will always have the
+         # current drawing in it, so it can be used to save the image
+         # to a file, or whatever.
+-        self._buffer = wx.EmptyBitmap(width, height)
++        self._buffer = EmptyBitmap(width, height)
+         # re-render image on idle
+         self.resize = True
  
      def ScaleRect(self, rect, scale):
          """Scale rectangle"""
@@ -15424,6 +15627,27 @@ Index: gui/wxpython/wxplot/dialogs.py
  
          # sizers
          btnStdSizer = wx.StdDialogButtonSizer()
+Index: gui/wxpython/wxplot/histogram.py
+===================================================================
+--- gui/wxpython/wxplot/histogram.py	(revision 73002)
++++ gui/wxpython/wxplot/histogram.py	(working copy)
+@@ -21,6 +21,7 @@
+ 
+ import grass.script as grass
+ import gui_core.wxlibplot as plot
++from gui_core.wrap import StockCursor
+ from gui_core.toolbars import BaseToolbar, BaseIcons
+ from wxplot.base import BasePlotFrame, PlotIcons
+ from wxplot.dialogs import HistRasterDialog, PlotStatsFrame
+@@ -90,7 +91,7 @@
+         plot to create a line graph of the histogram.
+         """
+         try:
+-            self.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
++            self.SetCursor(StockCursor(wx.CURSOR_ARROW))
+         except:
+             pass
+ 
 Index: gui/wxpython/wxplot/profile.py
 ===================================================================
 --- gui/wxpython/wxplot/profile.py	(revision 73002)
@@ -15436,7 +15660,15 @@ Index: gui/wxpython/wxplot/profile.py
  import math
  import numpy
  
-@@ -217,7 +218,7 @@
+@@ -27,6 +28,7 @@
+ from core.utils import _
+ from wxplot.base import BasePlotFrame, PlotIcons
+ from gui_core.toolbars import BaseToolbar, BaseIcons
++from gui_core.wrap import StockCursor
+ from wxplot.dialogs import ProfileRasterDialog, PlotStatsFrame
+ from core.gcmd import RunCommand, GWarning, GError, GMessage
+ 
+@@ -217,7 +219,7 @@
          self.ylabel = ''
          i = 0
  
@@ -15445,7 +15677,16 @@ Index: gui/wxpython/wxplot/profile.py
              self.raster[r]['datalist'] = []
              datalist = self.CreateDatalist(r, self.coordstr)
              if len(datalist) > 0:
-@@ -412,7 +413,7 @@
+@@ -294,7 +296,7 @@
+             dlg.Destroy()
+             return
+ 
+-        self.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
++        self.SetCursor(StockCursor(wx.CURSOR_ARROW))
+ 
+         self.SetupProfile()
+         p = self.CreatePlotList()
+@@ -412,7 +414,7 @@
          message = []
          title = _('Statistics for Profile(s)')
  
@@ -15454,3 +15695,24 @@ Index: gui/wxpython/wxplot/profile.py
              try:
                  rast = r.split('@')[0]
                  statstr = 'Profile of %s\n\n' % rast
+Index: gui/wxpython/wxplot/scatter.py
+===================================================================
+--- gui/wxpython/wxplot/scatter.py	(revision 73002)
++++ gui/wxpython/wxplot/scatter.py	(working copy)
+@@ -23,6 +23,7 @@
+ import gui_core.wxlibplot as plot
+ from wxplot.base import BasePlotFrame, PlotIcons
+ from gui_core.toolbars import BaseToolbar, BaseIcons
++from gui_core.wrap import StockCursor
+ from wxplot.dialogs import ScatterRasterDialog, PlotStatsFrame
+ from core.gcmd import RunCommand, GException, GError, GMessage
+ from core.utils import _
+@@ -88,7 +89,7 @@
+         create a list of cell value pairs. This is passed to
+         plot to create a scatterplot.
+         """
+-        self.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
++        self.SetCursor(StockCursor(wx.CURSOR_ARROW))
+         self.SetGraphStyle()
+         wx.BeginBusyCursor()
+         wx.SafeYield()
