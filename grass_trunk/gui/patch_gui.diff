@@ -2984,6 +2984,15 @@ Index: gui/wxpython/gmodeler/frame.py
  
  import wx
  from wx.lib import ogl
+@@ -51,7 +52,7 @@
+ from gui_core.ghelp import ShowAboutDialog
+ from gui_core.preferences import PreferencesBaseDialog
+ from core.settings import UserSettings
+-from gui_core.menu import Menu
++from gui_core.menu import Menu as Menubar
+ from gmodeler.menudata import ModelerMenuData
+ from gui_core.forms import GUI
+ from gmodeler.preferences import PreferencesDialog, PropertiesDialog
 @@ -61,6 +62,8 @@
  from gmodeler.giface import GraphicalModelerGrassInterface
  from gmodeler.model import *
@@ -3004,6 +3013,15 @@ Index: gui/wxpython/gmodeler/frame.py
          }
  
          wx.Frame.__init__(self, parent=parent, id=id, title=title, **kwargs)
+@@ -102,7 +105,7 @@
+                     'grass.ico'),
+                 wx.BITMAP_TYPE_ICO))
+ 
+-        self.menubar = Menu(
++        self.menubar = Menubar(
+             parent=self,
+             model=ModelerMenuData().GetModel(
+                 separators=True))
 @@ -380,7 +383,7 @@
          dlg.Init(properties)
          if dlg.ShowModal() == wx.ID_OK:
@@ -15038,7 +15056,7 @@ Index: gui/wxpython/wxplot/base.py
  from core.render import Map
  from icons.icon import MetaIcon
  from gui_core.toolbars import BaseIcons
-+from gui.core.wrap import Menu
++from gui_core.wrap import Menu
  from core.utils import _
  
  import grass.script as grass
