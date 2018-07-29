@@ -748,6 +748,15 @@ Index: gui/wxpython/core/render.py
 ===================================================================
 --- gui/wxpython/core/render.py	(revision 73002)
 +++ gui/wxpython/core/render.py	(working copy)
+@@ -33,7 +33,7 @@
+ import wx
+ 
+ from grass.script import core as grass
+-from grass.script.utils import try_remove
++from grass.script.utils import try_remove, decode
+ from grass.script.task import cmdlist_to_tuple, cmdtuple_to_list
+ from grass.pydispatch.signal import Signal
+ from grass.exceptions import CalledModuleError
 @@ -144,7 +144,7 @@
                    (self.type, self.name, self.mapfile))
  
@@ -766,6 +775,24 @@ Index: gui/wxpython/core/render.py
              raise GException(_("Unsupported map layer type '%s'") % ltype)
  
          if not self.renderMgr:
+@@ -786,7 +786,7 @@
+         if not ret:
+             return projinfo
+ 
+-        for line in ret.splitlines():
++        for line in decode(ret).splitlines():
+             if ':' in line:
+                 key, val = map(lambda x: x.strip(), line.split(':'))
+                 if key in ['units']:
+@@ -1022,7 +1022,7 @@
+             GError(message)
+             return self.region
+ 
+-        for r in reg.splitlines():
++        for r in decode(reg).splitlines():
+             key, val = r.split("=", 1)
+             try:
+                 region[key] = float(val)
 @@ -1154,7 +1154,7 @@
          """
          selected = []
@@ -5870,6 +5897,15 @@ Index: gui/wxpython/gui_core/query.py
              if isinstance(v, str):
                  k = DecodeString(k)
              if isinstance(v, dict):
+@@ -224,7 +226,7 @@
+                 node = model.AppendNode(parent=parent, label=k)
+                 addNode(parent=node, data=v, model=model)
+             else:
+-                if not isinstance(v, basestring):
++                if not isinstance(v, str):
+                     v = str(v)
+                 elif isinstance(v, str):
+                     v = DecodeString(v)
 Index: gui/wxpython/gui_core/simplelmgr.py
 ===================================================================
 --- gui/wxpython/gui_core/simplelmgr.py	(revision 73002)
@@ -8269,6 +8305,15 @@ Index: gui/wxpython/mapwin/buffered.py
              r.Inflate(4, 4)
              try:
                  pdc.ClearId(self.lineid)
+@@ -1563,7 +1564,7 @@
+             self._onLeftUp(event)
+ 
+         elif (self.mouse['use'] == 'pointer' and
+-                self.dragid >= 0):
++                self.dragid and int(self.dragid) >= 0):
+             # end drag of overlay decoration
+ 
+             if self.overlays and self.dragid in self.overlays:
 Index: gui/wxpython/modules/colorrules.py
 ===================================================================
 --- gui/wxpython/modules/colorrules.py	(revision 73002)
