@@ -550,7 +550,15 @@ Index: gui/wxpython/animation/frame.py
              self._mgr.AddPane(
                  slider,
                  wx.aui.AuiPaneInfo().PaneBorder(False).Name(
-@@ -383,11 +385,11 @@
+@@ -328,6 +330,7 @@
+         if self.controller.timer.IsRunning():
+             self.controller.timer.Stop()
+         CleanUp(TMP_DIR)()
++        self._mgr.UnInit()
+         self.Destroy()
+ 
+     def __del__(self):
+@@ -383,11 +386,11 @@
  
      def __init__(self, parent):
          wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -566,7 +574,7 @@ Index: gui/wxpython/animation/frame.py
  
          self.callbackSliderChanging = None
          self.callbackSliderChanged = None
-@@ -512,8 +514,8 @@
+@@ -512,8 +515,8 @@
      def __init__(self, parent):
          AnimationSliderBase.__init__(self, parent)
          self.timeLabels = []
@@ -6473,6 +6481,15 @@ Index: gui/wxpython/iclass/frame.py
  from mapwin.base import MapWindowProperties
  from dbmgr.vinfo import VectorDBInfo
  import grass.script as grass
+@@ -223,7 +225,7 @@
+         self.GetFirstWindow().GetDigit().CloseMap()
+         self.plotPanel.CloseWindow()
+         self._cleanup()
+-
++        self._mgr.UnInit()
+         self.Destroy()
+ 
+     def _cleanup(self):
 @@ -477,7 +479,7 @@
  
      def OnZoomMenu(self, event):
@@ -8130,6 +8147,18 @@ Index: gui/wxpython/mapswipe/dialogs.py
                  parent=panel,
                  label=_("Size:")),
              flag=wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL,
+Index: gui/wxpython/mapswipe/frame.py
+===================================================================
+--- gui/wxpython/mapswipe/frame.py	(revision 73022)
++++ gui/wxpython/mapswipe/frame.py	(working copy)
+@@ -766,6 +766,7 @@
+     def OnCloseWindow(self, event):
+         self.GetFirstMap().Clean()
+         self.GetSecondMap().Clean()
++        self._mgr.UnInit()
+         self.Destroy()
+ 
+ 
 Index: gui/wxpython/mapswipe/mapwindow.py
 ===================================================================
 --- gui/wxpython/mapswipe/mapwindow.py	(revision 73022)
