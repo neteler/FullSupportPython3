@@ -802,6 +802,41 @@ Index: gui/wxpython/core/render.py
              one_type = True
          else:
              one_type = False
+Index: gui/wxpython/core/toolboxes.py
+===================================================================
+--- gui/wxpython/core/toolboxes.py	(revision 73022)
++++ gui/wxpython/core/toolboxes.py	(working copy)
+@@ -34,7 +34,7 @@
+ 
+ import grass.script.task as gtask
+ import grass.script.core as gcore
+-from grass.script.utils import try_remove
++from grass.script.utils import try_remove, decode
+ from grass.exceptions import ScriptError, CalledModuleError
+ 
+ 
+@@ -766,9 +766,9 @@
+     :return: XML as string
+     """
+     xml = etree.tostring(root, encoding='UTF-8')
+-    return xml.replace("<?xml version='1.0' encoding='UTF-8'?>\n",
+-                       "<?xml version='1.0' encoding='UTF-8'?>\n"
+-                       "<!--This is an auto-generated file-->\n")
++    return xml.replace(b"<?xml version='1.0' encoding='UTF-8'?>\n",
++                       b"<?xml version='1.0' encoding='UTF-8'?>\n"
++                       b"<!--This is an auto-generated file-->\n")
+ 
+ 
+ def do_doctest_gettext_workaround():
+@@ -897,7 +897,7 @@
+     tree = createTree(distributionRootFile=mainFile, userRootFile=None,
+                       userDefined=False)
+     root = tree.getroot()
+-    sys.stdout.write(_getXMLString(root))
++    sys.stdout.write(decode(_getXMLString(root), encoding='UTF-8'))
+ 
+     return 0
+ 
 Index: gui/wxpython/core/treemodel.py
 ===================================================================
 --- gui/wxpython/core/treemodel.py	(revision 73022)
