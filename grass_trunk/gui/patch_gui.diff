@@ -3162,6 +3162,15 @@ Index: gui/wxpython/gmodeler/frame.py
  
          filetype, ltype = GetImageHandlers(wx.ImageFromBitmap(bitmap))
  
+@@ -1120,7 +1123,7 @@
+         :return: False on failure
+         """
+         self.ModelChanged(False)
+-        tmpfile = tempfile.TemporaryFile(mode='w+b')
++        tmpfile = tempfile.TemporaryFile(mode='r+')
+         try:
+             WriteModelFile(fd=tmpfile, model=self.model)
+         except Exception:
 @@ -1495,7 +1498,7 @@
          shape = self.GetShape()
          self._onSelectShape(shape)
@@ -3305,6 +3314,15 @@ Index: gui/wxpython/gmodeler/frame.py
                                             "It will discards all local changes."))
          self.Bind(wx.EVT_BUTTON, self.OnRefresh, self.btnRefresh)
  
+@@ -2124,7 +2127,7 @@
+             if ret == wx.ID_NO:
+                 return False
+ 
+-        fd = tempfile.TemporaryFile()
++        fd = tempfile.TemporaryFile(mode='r+')
+         WritePythonFile(fd, self.parent.GetModel())
+         fd.seek(0)
+         self.body.SetText(fd.read())
 Index: gui/wxpython/gmodeler/model.py
 ===================================================================
 --- gui/wxpython/gmodeler/model.py	(revision 73022)
