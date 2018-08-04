@@ -3162,7 +3162,18 @@ Index: gui/wxpython/gmodeler/frame.py
  
          filetype, ltype = GetImageHandlers(wx.ImageFromBitmap(bitmap))
  
-@@ -1120,7 +1123,7 @@
+@@ -726,10 +729,8 @@
+             dc.SetBackground(wx.WHITE_BRUSH)
+             dc.SetBackgroundMode(wx.SOLID)
+ 
+-            dc.BeginDrawing()
+             self.canvas.GetDiagram().Clear(dc)
+             self.canvas.GetDiagram().Redraw(dc)
+-            dc.EndDrawing()
+ 
+             bitmap.SaveFile(path, fileType)
+             self.SetStatusText(_("Model exported to <%s>") % path)
+@@ -1120,7 +1121,7 @@
          :return: False on failure
          """
          self.ModelChanged(False)
@@ -3171,7 +3182,7 @@ Index: gui/wxpython/gmodeler/frame.py
          try:
              WriteModelFile(fd=tmpfile, model=self.model)
          except Exception:
-@@ -1495,7 +1498,7 @@
+@@ -1495,7 +1496,7 @@
          shape = self.GetShape()
          self._onSelectShape(shape)
  
@@ -3180,7 +3191,7 @@ Index: gui/wxpython/gmodeler/frame.py
          popupMenu.Append(self.popupID['remove'], text=_('Remove'))
          self.frame.Bind(wx.EVT_MENU, self.OnRemove, id=self.popupID['remove'])
          if isinstance(shape, ModelAction) or isinstance(shape, ModelLoop):
-@@ -1721,7 +1724,7 @@
+@@ -1721,7 +1722,7 @@
  
          wx.Panel.__init__(self, parent=parent, id=id, **kwargs)
  
@@ -3189,7 +3200,7 @@ Index: gui/wxpython/gmodeler/frame.py
              parent=self, id=wx.ID_ANY, label=" %s " %
              _("List of variables - right-click to delete"))
  
-@@ -1735,9 +1738,9 @@
+@@ -1735,9 +1736,9 @@
              frame=self.parent)
  
          # add new category
@@ -3202,7 +3213,7 @@ Index: gui/wxpython/gmodeler/frame.py
          wx.CallAfter(self.name.SetFocus)
          self.type = wx.Choice(parent=self, id=wx.ID_ANY,
                                choices=[_("integer"),
-@@ -1750,12 +1753,12 @@
+@@ -1750,12 +1751,12 @@
                                         _("file"),
                                         _("dir")])
          self.type.SetSelection(2)  # string
@@ -3219,7 +3230,7 @@ Index: gui/wxpython/gmodeler/frame.py
          self.btnAdd.Enable(False)
  
          # bindings
-@@ -1774,28 +1777,28 @@
+@@ -1774,28 +1775,28 @@
  
          addSizer = wx.StaticBoxSizer(self.addBox, wx.VERTICAL)
          gridSizer = wx.GridBagSizer(hgap=5, vgap=5)
@@ -3256,7 +3267,7 @@ Index: gui/wxpython/gmodeler/frame.py
                        flag=wx.ALIGN_CENTER_VERTICAL,
                        pos=(2, 0))
          gridSizer.Add(self.desc,
-@@ -1845,7 +1848,7 @@
+@@ -1845,7 +1846,7 @@
      def UpdateModelVariables(self):
          """Update model variables"""
          variables = dict()
@@ -3265,7 +3276,7 @@ Index: gui/wxpython/gmodeler/frame.py
              name = values[0]
              variables[name] = {'type': str(values[1])}
              if values[2]:
-@@ -1876,7 +1879,7 @@
+@@ -1876,7 +1877,7 @@
  
          wx.Panel.__init__(self, parent=parent, id=id, **kwargs)
  
@@ -3274,7 +3285,7 @@ Index: gui/wxpython/gmodeler/frame.py
              parent=self, id=wx.ID_ANY, label=" %s " %
              _("List of items - right-click to delete"))
  
-@@ -1893,9 +1896,9 @@
+@@ -1893,9 +1894,9 @@
                  3],
              frame=self.parent)
  
@@ -3287,7 +3298,7 @@ Index: gui/wxpython/gmodeler/frame.py
  
          self.btnMoveUp.Bind(wx.EVT_BUTTON, self.OnMoveItemsUp)
          self.btnMoveDown.Bind(wx.EVT_BUTTON, self.OnMoveItemsDown)
-@@ -1976,18 +1979,18 @@
+@@ -1976,18 +1977,18 @@
  
          self.filename = None  # temp file to run
  
@@ -3314,7 +3325,7 @@ Index: gui/wxpython/gmodeler/frame.py
                                             "It will discards all local changes."))
          self.Bind(wx.EVT_BUTTON, self.OnRefresh, self.btnRefresh)
  
-@@ -2124,7 +2127,7 @@
+@@ -2124,7 +2125,7 @@
              if ret == wx.ID_NO:
                  return False
  
@@ -4197,7 +4208,21 @@ Index: gui/wxpython/gui_core/dialogs.py
          btnApply.Bind(wx.EVT_BUTTON, self.OnApply)
          btnsizer.AddButton(btnApply)
          btnsizer.Realize()
-@@ -1892,8 +1894,8 @@
+@@ -1831,8 +1833,11 @@
+     """Get list of supported image handlers"""
+     lext = list()
+     ltype = list()
+-    for h in image.GetHandlers():
+-        lext.append(h.GetExtension())
++    try:
++        for h in image.GetHandlers():
++            lext.append(h.GetExtension())
++    except AttributeError:
++        lext = {'png', 'gif', 'jpg', 'pcx', 'pnm', 'tif', 'xpm'}
+ 
+     filetype = ''
+     if 'png' in lext:
+@@ -1892,8 +1897,8 @@
  
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
  
@@ -4208,7 +4233,7 @@ Index: gui/wxpython/gui_core/dialogs.py
  
          size = self.parent.GetWindow().GetClientSize()
          self.width = SpinCtrl(parent=self.panel, id=wx.ID_ANY,
-@@ -1915,9 +1917,9 @@
+@@ -1915,9 +1920,9 @@
                                             "1600x1200",
                                             "1920x1440"])
  
@@ -4220,7 +4245,7 @@ Index: gui/wxpython/gui_core/dialogs.py
  
          self.template.Bind(wx.EVT_CHOICE, self.OnTemplate)
  
-@@ -1931,16 +1933,16 @@
+@@ -1931,16 +1936,16 @@
          # body
          box = wx.StaticBoxSizer(self.box, wx.HORIZONTAL)
          fbox = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
@@ -4243,7 +4268,7 @@ Index: gui/wxpython/gui_core/dialogs.py
                   flag=wx.ALIGN_CENTER_VERTICAL)
          fbox.Add(self.template)
  
-@@ -1995,13 +1997,13 @@
+@@ -1995,13 +2000,13 @@
                  wx.BITMAP_TYPE_ICO))
          self.panel = wx.Panel(parent=self, id=wx.ID_ANY)
  
@@ -4263,7 +4288,7 @@ Index: gui/wxpython/gui_core/dialogs.py
          self.Bind(wx.EVT_BUTTON, self.OnCloseWindow, self.btnCancel)
  
          self._layout()
-@@ -2076,7 +2078,7 @@
+@@ -2076,7 +2081,7 @@
          self.folderChoice.Bind(wx.EVT_CHOICE, self.OnFolderSelect)
  
          fgSizer.Add(
@@ -4272,7 +4297,7 @@ Index: gui/wxpython/gui_core/dialogs.py
                  mainPanel,
                  id=wx.ID_ANY,
                  label=_("Symbol directory:")),
-@@ -2086,9 +2088,9 @@
+@@ -2086,9 +2091,9 @@
          fgSizer.Add(self.folderChoice, proportion=0,
                      flag=wx.ALIGN_CENTER, border=0)
  
@@ -4284,7 +4309,7 @@ Index: gui/wxpython/gui_core/dialogs.py
                  mainPanel,
                  id=wx.ID_ANY,
                  label=_("Symbol name:")),
-@@ -2102,8 +2104,8 @@
+@@ -2102,8 +2107,8 @@
              vSizer.Add(panel, proportion=0, flag=wx.ALL | wx.EXPAND, border=5)
  
          mainSizer.Add(vSizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=5)
@@ -4295,7 +4320,7 @@ Index: gui/wxpython/gui_core/dialogs.py
          self.btnOK.SetDefault()
          self.btnOK.Enable(False)
  
-@@ -2246,10 +2248,10 @@
+@@ -2246,10 +2251,10 @@
  
          vbox = wx.BoxSizer(wx.VERTICAL)
  
@@ -4308,7 +4333,7 @@ Index: gui/wxpython/gui_core/dialogs.py
              self,
              id=wx.ID_ANY,
              value=defaultValue,
-@@ -2296,7 +2298,7 @@
+@@ -2296,7 +2301,7 @@
  
          sizer = wx.BoxSizer(wx.VERTICAL)
  
@@ -4317,7 +4342,7 @@ Index: gui/wxpython/gui_core/dialogs.py
          sizer.Add(
              label,
              proportion=0,
-@@ -2340,15 +2342,15 @@
+@@ -2340,15 +2345,15 @@
                  wx.ART_QUESTION,
                  client=wx.ART_MESSAGE_BOX))
  
@@ -4337,7 +4362,7 @@ Index: gui/wxpython/gui_core/dialogs.py
                                   label=_("Quit GRASS GIS"))
          self.btnQuit.SetForegroundColour(wx.Colour(35, 142, 35))
  
-@@ -2409,7 +2411,7 @@
+@@ -2409,7 +2414,7 @@
          self.fontdict, fontdict_reverse, self.fontlist = self.GetFonts()
  
          border = wx.BoxSizer(wx.VERTICAL)
@@ -4346,7 +4371,7 @@ Index: gui/wxpython/gui_core/dialogs.py
              parent=panel,
              id=wx.ID_ANY,
              label=" %s " %
-@@ -2418,8 +2420,8 @@
+@@ -2418,8 +2423,8 @@
  
          gridSizer = wx.GridBagSizer(hgap=5, vgap=5)
  
@@ -4357,7 +4382,7 @@ Index: gui/wxpython/gui_core/dialogs.py
          gridSizer.Add(label,
                        flag=wx.ALIGN_TOP,
                        pos=(0, 0))
-@@ -2449,14 +2451,14 @@
+@@ -2449,14 +2454,14 @@
              self.encoding = self.settings.Get(group='display',
                                                key='font', subkey='encoding')
  
@@ -4376,7 +4401,7 @@ Index: gui/wxpython/gui_core/dialogs.py
              gridSizer.Add(self.textentry,
                            flag=wx.EXPAND, pos=(4, 0))
  
-@@ -2467,8 +2469,8 @@
+@@ -2467,8 +2472,8 @@
                                            key='outputfont', subkey='type')
              self.fontsize = self.settings.Get(group='appearance',
                                                key='outputfont', subkey='size')
@@ -4387,7 +4412,7 @@ Index: gui/wxpython/gui_core/dialogs.py
              gridSizer.Add(label,
                            flag=wx.ALIGN_CENTER_VERTICAL,
                            pos=(3, 0))
-@@ -2503,11 +2505,11 @@
+@@ -2503,11 +2508,11 @@
  
          btnsizer = wx.StdDialogButtonSizer()
  
