@@ -8421,6 +8421,15 @@ Index: gui/wxpython/mapwin/buffered.py
  
          if not hasattr(self, "popupCopyCoordinates"):
              self.popupCopyCoordinates = wx.NewId()
+@@ -275,7 +276,7 @@
+ 
+         pos = self.ScreenToClient(event.GetPosition())
+         idlist = self.pdc.FindObjects(pos[0], pos[1], self.hitradius)
+-        if self.overlays and idlist and [i for i in idlist if i in self.overlays.keys()]:  # legend, scale bar, north arrow, dtext
++        if self.overlays and idlist and [i for i in idlist if i in list(self.overlays.keys())]:  # legend, scale bar, north arrow, dtext
+             menu.AppendSeparator()
+             removeId = wx.NewId()
+             self.Bind(wx.EVT_MENU,
 @@ -349,7 +350,7 @@
                  bitmap, coords[0],
                  coords[1],
@@ -8511,6 +8520,24 @@ Index: gui/wxpython/mapwin/buffered.py
              max(1, self.Map.width),
              max(1, self.Map.height))
  
+@@ -739,7 +740,7 @@
+                           pdctype=self.overlays[id].pdcType, coords=coords)
+ 
+         # redraw text labels
+-        for id in self.textdict.keys():
++        for id in list(self.textdict.keys()):
+             textinfo = self.textdict[id]
+             oldCoords = textinfo['coords']
+             textinfo['coords'] = ratio[0] * textinfo['coords'][0],\
+@@ -783,7 +784,7 @@
+                     overlay.mapfile):
+                 img = utils.autoCropImageFromFile(overlay.mapfile)
+ 
+-                for key in self.imagedict.keys():
++                for key in list(self.imagedict.keys()):
+                     if self.imagedict[key]['id'] == overlay.id:
+                         del self.imagedict[key]
+ 
 @@ -807,7 +808,7 @@
          else:
              img = None
@@ -8519,6 +8546,15 @@ Index: gui/wxpython/mapwin/buffered.py
 +        for key in list(self.imagedict.keys()):
              if self.imagedict[key]['id'] == imgId:
                  del self.imagedict[key]
+ 
+@@ -967,7 +968,7 @@
+                           pdctype=self.overlays[id].pdcType,
+                           coords=self.overlays[id].coords)
+ 
+-        for id in self.textdict.keys():
++        for id in list(self.textdict.keys()):
+             self.Draw(self.pdc, img=self.textdict[id], drawid=id,
+                       pdctype='text', coords=[10, 10, 10, 10])
  
 @@ -1072,7 +1073,7 @@
          r = self.pdc.GetIdBounds(id)
@@ -8565,6 +8601,15 @@ Index: gui/wxpython/mapwin/buffered.py
              # end drag of overlay decoration
  
              if self.overlays and self.dragid in self.overlays:
+@@ -1695,7 +1696,7 @@
+ 
+         pos = event.GetPosition()
+         idlist = self.pdc.FindObjects(pos[0], pos[1], self.hitradius)
+-        if self.overlays and idlist and [i for i in idlist if i in self.overlays.keys()]:  # legend, scale bar, north arrow, dtext
++        if self.overlays and idlist and [i for i in idlist if i in list(self.overlays.keys())]:  # legend, scale bar, north arrow, dtext
+             self.SetToolTip("Double click in Pointer mode to set object"
+                             " properties,\nright click to remove")
+         else:
 Index: gui/wxpython/modules/colorrules.py
 ===================================================================
 --- gui/wxpython/modules/colorrules.py	(revision 73049)
