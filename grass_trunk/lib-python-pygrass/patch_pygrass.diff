@@ -1,6 +1,6 @@
 Index: lib/python/pygrass/modules/interface/module.py
 ===================================================================
---- lib/python/pygrass/modules/interface/module.py	(revision 72963)
+--- lib/python/pygrass/modules/interface/module.py	(revision 73073)
 +++ lib/python/pygrass/modules/interface/module.py	(working copy)
 @@ -8,6 +8,7 @@
  
@@ -24,7 +24,7 @@ Index: lib/python/pygrass/modules/interface/module.py
              self.time = time.time() - self.start_time
 Index: lib/python/pygrass/modules/interface/parameter.py
 ===================================================================
---- lib/python/pygrass/modules/interface/parameter.py	(revision 72963)
+--- lib/python/pygrass/modules/interface/parameter.py	(revision 73073)
 +++ lib/python/pygrass/modules/interface/parameter.py	(working copy)
 @@ -22,7 +22,7 @@
  
@@ -37,7 +37,7 @@ Index: lib/python/pygrass/modules/interface/parameter.py
          elif isinstance(exc, TypeError):
 Index: lib/python/pygrass/raster/abstract.py
 ===================================================================
---- lib/python/pygrass/raster/abstract.py	(revision 72963)
+--- lib/python/pygrass/raster/abstract.py	(revision 73073)
 +++ lib/python/pygrass/raster/abstract.py	(working copy)
 @@ -64,7 +64,7 @@
          """
@@ -50,7 +50,7 @@ Index: lib/python/pygrass/raster/abstract.py
      def _get_range(self):
 Index: lib/python/pygrass/raster/history.py
 ===================================================================
---- lib/python/pygrass/raster/history.py	(revision 72963)
+--- lib/python/pygrass/raster/history.py	(revision 73073)
 +++ lib/python/pygrass/raster/history.py	(working copy)
 @@ -7,6 +7,7 @@
  import ctypes
@@ -126,7 +126,7 @@ Index: lib/python/pygrass/raster/history.py
                                            ctypes.c_char_p(title))
 Index: lib/python/pygrass/raster/segment.py
 ===================================================================
---- lib/python/pygrass/raster/segment.py	(revision 72963)
+--- lib/python/pygrass/raster/segment.py	(revision 73073)
 +++ lib/python/pygrass/raster/segment.py	(working copy)
 @@ -61,7 +61,7 @@
          """
@@ -139,7 +139,7 @@ Index: lib/python/pygrass/raster/segment.py
              libseg.Segment_format(mapobj.temp_file.fileno(), self.rows(),
 Index: lib/python/pygrass/raster/testsuite/test_history.py
 ===================================================================
---- lib/python/pygrass/raster/testsuite/test_history.py	(revision 72963)
+--- lib/python/pygrass/raster/testsuite/test_history.py	(revision 73073)
 +++ lib/python/pygrass/raster/testsuite/test_history.py	(working copy)
 @@ -10,6 +10,7 @@
  
@@ -203,7 +203,7 @@ Index: lib/python/pygrass/raster/testsuite/test_history.py
  if __name__ == '__main__':
 Index: lib/python/pygrass/vector/geometry.py
 ===================================================================
---- lib/python/pygrass/vector/geometry.py	(revision 72963)
+--- lib/python/pygrass/vector/geometry.py	(revision 73073)
 +++ lib/python/pygrass/vector/geometry.py	(working copy)
 @@ -721,7 +721,8 @@
                                            pnt.c_points.contents.x,
@@ -217,7 +217,7 @@ Index: lib/python/pygrass/vector/geometry.py
          return pnt
 Index: lib/python/pygrass/vector/table.py
 ===================================================================
---- lib/python/pygrass/vector/table.py	(revision 72963)
+--- lib/python/pygrass/vector/table.py	(revision 73073)
 +++ lib/python/pygrass/vector/table.py	(working copy)
 @@ -30,8 +30,10 @@
  from grass.pygrass.utils import table_exist

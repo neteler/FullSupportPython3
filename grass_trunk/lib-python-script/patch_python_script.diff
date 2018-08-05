@@ -1,6 +1,6 @@
 Index: lib/python/script/core.py
 ===================================================================
---- lib/python/script/core.py	(revision 72759)
+--- lib/python/script/core.py	(revision 73073)
 +++ lib/python/script/core.py	(working copy)
 @@ -25,9 +25,8 @@
  import subprocess
@@ -180,7 +180,7 @@ Index: lib/python/script/core.py
      else:
 Index: lib/python/script/db.py
 ===================================================================
---- lib/python/script/db.py	(revision 72759)
+--- lib/python/script/db.py	(revision 73073)
 +++ lib/python/script/db.py	(working copy)
 @@ -40,6 +40,10 @@
  
@@ -222,7 +222,7 @@ Index: lib/python/script/db.py
      for vect in vects:
 Index: lib/python/script/task.py
 ===================================================================
---- lib/python/script/task.py	(revision 72759)
+--- lib/python/script/task.py	(revision 73073)
 +++ lib/python/script/task.py	(working copy)
 @@ -430,7 +430,8 @@
          """Get node text"""
@@ -290,11 +290,12 @@ Index: lib/python/script/testsuite/test_db.py
 ===================================================================
 --- lib/python/script/testsuite/test_db.py	(nonexistent)
 +++ lib/python/script/testsuite/test_db.py	(working copy)
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,83 @@
 +# -*- coding: utf-8 -*-
 +"""
 +Created on Tue May 31 11:33:13 2018
 +
++@author: Sanjeet Bhatti
 +"""
 +
 +from grass.gunittest.case import TestCase
@@ -375,7 +376,7 @@ Index: lib/python/script/testsuite/test_db.py
 +    test()
 Index: lib/python/script/testsuite/test_start_command_functions.py
 ===================================================================
---- lib/python/script/testsuite/test_start_command_functions.py	(revision 72759)
+--- lib/python/script/testsuite/test_start_command_functions.py	(revision 73073)
 +++ lib/python/script/testsuite/test_start_command_functions.py	(working copy)
 @@ -2,10 +2,13 @@
  # the utf-8 is important because we do use the characters
@@ -476,10 +477,12 @@ Index: lib/python/script/testsuite/test_task.py
 ===================================================================
 --- lib/python/script/testsuite/test_task.py	(nonexistent)
 +++ lib/python/script/testsuite/test_task.py	(working copy)
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,68 @@
 +# -*- coding: utf-8 -*-
 +"""
 +Created on Tue Jun 1 10:56:05 2018
++
++@author: Sanjeet Bhatti
 +
 +"""
 +import sys
@@ -545,7 +548,7 @@ Index: lib/python/script/testsuite/test_task.py
 +    test()
 Index: lib/python/script/testsuite/test_utils.py
 ===================================================================
---- lib/python/script/testsuite/test_utils.py	(revision 72759)
+--- lib/python/script/testsuite/test_utils.py	(revision 73073)
 +++ lib/python/script/testsuite/test_utils.py	(working copy)
 @@ -1,5 +1,6 @@
  # -*- coding: utf-8 -*-
@@ -628,11 +631,12 @@ Index: lib/python/script/testsuite/test_vector.py
 ===================================================================
 --- lib/python/script/testsuite/test_vector.py	(nonexistent)
 +++ lib/python/script/testsuite/test_vector.py	(working copy)
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,41 @@
 +# -*- coding: utf-8 -*-
 +"""
 +Created on Tue May 29 11:33:13 2018
 +
++@author: Sanjeet Bhatti
 +"""
 +
 +from grass.gunittest.case import TestCase
@@ -671,7 +675,7 @@ Index: lib/python/script/testsuite/test_vector.py
 +    test()
 Index: lib/python/script/utils.py
 ===================================================================
---- lib/python/script/utils.py	(revision 72759)
+--- lib/python/script/utils.py	(revision 73073)
 +++ lib/python/script/utils.py	(working copy)
 @@ -163,12 +163,13 @@
      return encoding

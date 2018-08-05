@@ -59,7 +59,7 @@ Index: scripts/db.dropcolumn/testsuite/test_db_dropcolumn.py
 +    test()
 Index: scripts/db.droptable/db.droptable.py
 ===================================================================
---- scripts/db.droptable/db.droptable.py	(revision 72800)
+--- scripts/db.droptable/db.droptable.py	(revision 73073)
 +++ scripts/db.droptable/db.droptable.py	(working copy)
 @@ -44,6 +44,7 @@
  
@@ -135,7 +135,7 @@ Index: scripts/db.droptable/testsuite/test_db_droptable.py
 +    test()
 Index: scripts/db.in.ogr/db.in.ogr.py
 ===================================================================
---- scripts/db.in.ogr/db.in.ogr.py	(revision 72800)
+--- scripts/db.in.ogr/db.in.ogr.py	(revision 73073)
 +++ scripts/db.in.ogr/db.in.ogr.py	(working copy)
 @@ -60,6 +60,7 @@
  
@@ -300,7 +300,7 @@ Index: scripts/db.out.ogr/testsuite/test_db_out_ogr.py
 +    test()
 Index: scripts/db.test/db.test.py
 ===================================================================
---- scripts/db.test/db.test.py	(revision 72800)
+--- scripts/db.test/db.test.py	(revision 73073)
 +++ scripts/db.test/db.test.py	(working copy)
 @@ -48,7 +48,7 @@
      gcore.message(_("Using DB driver: %s") % dbconn['driver'])
@@ -331,7 +331,7 @@ Index: scripts/db.test/db.test.py
              if not res:
 Index: scripts/db.univar/db.univar.py
 ===================================================================
---- scripts/db.univar/db.univar.py	(revision 72800)
+--- scripts/db.univar/db.univar.py	(revision 73073)
 +++ scripts/db.univar/db.univar.py	(working copy)
 @@ -73,8 +73,8 @@
  
@@ -435,7 +435,7 @@ Index: scripts/db.univar/testsuite/test_db_univar.py
 +    test()
 Index: scripts/g.extension/g.extension.py
 ===================================================================
---- scripts/g.extension/g.extension.py	(revision 72800)
+--- scripts/g.extension/g.extension.py	(revision 73073)
 +++ scripts/g.extension/g.extension.py	(working copy)
 @@ -138,12 +138,12 @@
  from distutils.dir_util import copy_tree
@@ -509,7 +509,7 @@ Index: scripts/g.extension/g.extension.py
              # we don't expect there would be CRLF file by purpose
 Index: scripts/g.extension/testsuite/test_addons_modules.py
 ===================================================================
---- scripts/g.extension/testsuite/test_addons_modules.py	(revision 72800)
+--- scripts/g.extension/testsuite/test_addons_modules.py	(revision 73073)
 +++ scripts/g.extension/testsuite/test_addons_modules.py	(working copy)
 @@ -16,6 +16,7 @@
  from grass.gunittest.main import test
@@ -530,7 +530,7 @@ Index: scripts/g.extension/testsuite/test_addons_modules.py
  
 Index: scripts/g.extension/testsuite/test_addons_toolboxes.py
 ===================================================================
---- scripts/g.extension/testsuite/test_addons_toolboxes.py	(revision 72800)
+--- scripts/g.extension/testsuite/test_addons_toolboxes.py	(revision 73073)
 +++ scripts/g.extension/testsuite/test_addons_toolboxes.py	(working copy)
 @@ -15,6 +15,7 @@
  from grass.gunittest.case import TestCase
@@ -553,7 +553,7 @@ Index: scripts/g.extension/testsuite/test_addons_toolboxes.py
  if __name__ == '__main__':
 Index: scripts/g.search.modules/testsuite/test_g_search_modules.py
 ===================================================================
---- scripts/g.search.modules/testsuite/test_g_search_modules.py	(revision 72800)
+--- scripts/g.search.modules/testsuite/test_g_search_modules.py	(revision 73073)
 +++ scripts/g.search.modules/testsuite/test_g_search_modules.py	(working copy)
 @@ -15,10 +15,17 @@
  from grass.gunittest.case import TestCase
@@ -622,7 +622,7 @@ Index: scripts/g.search.modules/testsuite/test_g_search_modules.py
  if __name__ == '__main__':
 Index: scripts/i.in.spotvgt/i.in.spotvgt.py
 ===================================================================
---- scripts/i.in.spotvgt/i.in.spotvgt.py	(revision 72800)
+--- scripts/i.in.spotvgt/i.in.spotvgt.py	(revision 73073)
 +++ scripts/i.in.spotvgt/i.in.spotvgt.py	(working copy)
 @@ -77,7 +77,7 @@
  
@@ -644,7 +644,7 @@ Index: scripts/i.in.spotvgt/i.in.spotvgt.py
  
 Index: scripts/i.oif/i.oif.py
 ===================================================================
---- scripts/i.oif/i.oif.py	(revision 72800)
+--- scripts/i.oif/i.oif.py	(revision 73073)
 +++ scripts/i.oif/i.oif.py	(working copy)
 @@ -156,7 +156,7 @@
          for v, p in oif:
@@ -657,7 +657,7 @@ Index: scripts/i.oif/i.oif.py
          outf.close()
 Index: scripts/i.pansharpen/i.pansharpen.py
 ===================================================================
---- scripts/i.pansharpen/i.pansharpen.py	(revision 72800)
+--- scripts/i.pansharpen/i.pansharpen.py	(revision 73073)
 +++ scripts/i.pansharpen/i.pansharpen.py	(working copy)
 @@ -89,6 +89,7 @@
      hasNumPy = False
@@ -678,7 +678,7 @@ Index: scripts/i.pansharpen/i.pansharpen.py
          for j in stats_dict:
 Index: scripts/i.tasscap/i.tasscap.py
 ===================================================================
---- scripts/i.tasscap/i.tasscap.py	(revision 72800)
+--- scripts/i.tasscap/i.tasscap.py	(revision 73073)
 +++ scripts/i.tasscap/i.tasscap.py	(working copy)
 @@ -165,7 +165,7 @@
      for i, band in enumerate(inputs):
@@ -691,7 +691,7 @@ Index: scripts/i.tasscap/i.tasscap.py
      calcN(output_basename, bands, satellite)
 Index: scripts/m.proj/m.proj.py
 ===================================================================
---- scripts/m.proj/m.proj.py	(revision 72800)
+--- scripts/m.proj/m.proj.py	(revision 73073)
 +++ scripts/m.proj/m.proj.py	(working copy)
 @@ -95,7 +95,7 @@
  import sys
@@ -800,7 +800,7 @@ Index: scripts/r.blend/testsuite/test_r_blend.py
 +    test()
 Index: scripts/r.buffer.lowmem/r.buffer.lowmem.py
 ===================================================================
---- scripts/r.buffer.lowmem/r.buffer.lowmem.py	(revision 72800)
+--- scripts/r.buffer.lowmem/r.buffer.lowmem.py	(revision 73073)
 +++ scripts/r.buffer.lowmem/r.buffer.lowmem.py	(working copy)
 @@ -46,6 +46,7 @@
  import atexit
@@ -827,7 +827,7 @@ Index: scripts/r.buffer.lowmem/r.buffer.lowmem.py
      p.wait()
 Index: scripts/r.colors.stddev/r.colors.stddev.py
 ===================================================================
---- scripts/r.colors.stddev/r.colors.stddev.py	(revision 72800)
+--- scripts/r.colors.stddev/r.colors.stddev.py	(revision 73073)
 +++ scripts/r.colors.stddev/r.colors.stddev.py	(working copy)
 @@ -34,6 +34,7 @@
  import atexit
@@ -896,7 +896,7 @@ Index: scripts/r.colors.stddev/testsuite/test_r_colors_stddev.py
 +    test()
 Index: scripts/r.fillnulls/r.fillnulls.py
 ===================================================================
---- scripts/r.fillnulls/r.fillnulls.py	(revision 72800)
+--- scripts/r.fillnulls/r.fillnulls.py	(revision 73073)
 +++ scripts/r.fillnulls/r.fillnulls.py	(working copy)
 @@ -246,7 +246,7 @@
              file=cats_file_name,
@@ -960,27 +960,6 @@ Index: scripts/r.fillnulls/testsuite/test_r_fillnulls.py
 +
 +if __name__ == '__main__':
 +    test()
-Index: scripts/r.grow/r.grow.py
-===================================================================
---- scripts/r.grow/r.grow.py	(revision 72800)
-+++ scripts/r.grow/r.grow.py	(working copy)
-@@ -64,7 +64,6 @@
- import os
- import atexit
- import math
--from string import split
- import grass.script as grass
- from grass.exceptions import CalledModuleError
- 
-@@ -124,7 +123,7 @@
- 
-     # Workaround for r.mapcalc bug #3475
-     # Mapcalc will fail if output is a fully qualified map name
--    out_name = split(options['output'], '@')
-+    out_name = options['output'].split('@')
-     if len(out_name) == 2:
-         if out_name[1] != grass.gisenv()['MAPSET']:
-             grass.fatal(_("Output can be written only to the current mapset"))
 Index: scripts/r.grow/testsuite/test_r_grow.py
 ===================================================================
 --- scripts/r.grow/testsuite/test_r_grow.py	(nonexistent)
@@ -1037,7 +1016,7 @@ Index: scripts/r.grow/testsuite/test_r_grow.py
 +    test()
 Index: scripts/r.in.srtm/r.in.srtm.py
 ===================================================================
---- scripts/r.in.srtm/r.in.srtm.py	(revision 72800)
+--- scripts/r.in.srtm/r.in.srtm.py	(revision 73073)
 +++ scripts/r.in.srtm/r.in.srtm.py	(working copy)
 @@ -262,13 +262,13 @@
  
@@ -1057,7 +1036,7 @@ Index: scripts/r.in.srtm/r.in.srtm.py
  
 Index: scripts/r.in.wms/r.in.wms.py
 ===================================================================
---- scripts/r.in.wms/r.in.wms.py	(revision 72800)
+--- scripts/r.in.wms/r.in.wms.py	(revision 73073)
 +++ scripts/r.in.wms/r.in.wms.py	(working copy)
 @@ -177,6 +177,7 @@
  sys.path.insert(1, os.path.join(os.path.dirname(sys.path[0]), 'etc', 'r.in.wms'))
@@ -1078,7 +1057,7 @@ Index: scripts/r.in.wms/r.in.wms.py
  
 Index: scripts/r.in.wms/wms_base.py
 ===================================================================
---- scripts/r.in.wms/wms_base.py	(revision 72800)
+--- scripts/r.in.wms/wms_base.py	(revision 73073)
 +++ scripts/r.in.wms/wms_base.py	(working copy)
 @@ -133,7 +133,8 @@
          else:
@@ -1101,7 +1080,7 @@ Index: scripts/r.in.wms/wms_base.py
  
 Index: scripts/r.in.wms/wms_drv.py
 ===================================================================
---- scripts/r.in.wms/wms_drv.py	(revision 72800)
+--- scripts/r.in.wms/wms_drv.py	(revision 73073)
 +++ scripts/r.in.wms/wms_drv.py	(working copy)
 @@ -227,7 +227,8 @@
          # georeferencing and setting projection of temp_map
@@ -1115,7 +1094,7 @@ Index: scripts/r.in.wms/wms_drv.py
          pixel_x_length = (map_region['maxx'] - map_region['minx']) / int(map_region['cols'])
 Index: scripts/r.mask/r.mask.py
 ===================================================================
---- scripts/r.mask/r.mask.py	(revision 72800)
+--- scripts/r.mask/r.mask.py	(revision 73073)
 +++ scripts/r.mask/r.mask.py	(working copy)
 @@ -71,6 +71,7 @@
  import atexit
@@ -1326,7 +1305,7 @@ Index: scripts/r.plane/testsuite/test_r_plane.py
 +    test()
 Index: scripts/r.reclass.area/r.reclass.area.py
 ===================================================================
---- scripts/r.reclass.area/r.reclass.area.py	(revision 72800)
+--- scripts/r.reclass.area/r.reclass.area.py	(revision 73073)
 +++ scripts/r.reclass.area/r.reclass.area.py	(working copy)
 @@ -76,6 +76,7 @@
  import os
@@ -1459,7 +1438,7 @@ Index: scripts/r.shade/testsuite/test_r_shade.py
 +    test()
 Index: scripts/r.tileset/r.tileset.py
 ===================================================================
---- scripts/r.tileset/r.tileset.py	(revision 72800)
+--- scripts/r.tileset/r.tileset.py	(revision 73073)
 +++ scripts/r.tileset/r.tileset.py	(working copy)
 @@ -114,6 +114,7 @@
  
@@ -1642,7 +1621,7 @@ Index: scripts/v.db.addcolumn/testsuite/test_v_db_addcolumn.py
 +    test()
 Index: scripts/v.db.addcolumn/v.db.addcolumn.py
 ===================================================================
---- scripts/v.db.addcolumn/v.db.addcolumn.py	(revision 72800)
+--- scripts/v.db.addcolumn/v.db.addcolumn.py	(revision 73073)
 +++ scripts/v.db.addcolumn/v.db.addcolumn.py	(working copy)
 @@ -43,6 +43,7 @@
  import sys
@@ -1720,9 +1699,9 @@ Index: scripts/v.db.addtable/testsuite/test_v_db_addtable.py
 +    test()
 Index: scripts/v.db.addtable/v.db.addtable.py
 ===================================================================
---- scripts/v.db.addtable/v.db.addtable.py	(revision 72800)
+--- scripts/v.db.addtable/v.db.addtable.py	(revision 73073)
 +++ scripts/v.db.addtable/v.db.addtable.py	(working copy)
-@@ -55,6 +55,7 @@
+@@ -56,6 +56,7 @@
  import sys
  import os
  import grass.script as grass
@@ -1730,7 +1709,7 @@ Index: scripts/v.db.addtable/v.db.addtable.py
  from grass.exceptions import CalledModuleError
  
  # i18N
-@@ -98,7 +99,7 @@
+@@ -99,7 +100,7 @@
      schema = kv['schema']
  
      # maybe there is already a table linked to the selected layer?
@@ -1739,7 +1718,7 @@ Index: scripts/v.db.addtable/v.db.addtable.py
      try:
          grass.vector_db(map_name, stderr=nuldev)[int(layer)]
          grass.fatal(_("There is already a table linked to layer <%s>") % layer)
-@@ -108,6 +109,7 @@
+@@ -109,6 +110,7 @@
      # maybe there is already a table with that name?
      tables = grass.read_command('db.tables', flags='p', database=database, driver=driver,
                                  stderr=nuldev)
@@ -1905,7 +1884,7 @@ Index: scripts/v.db.droptable/testsuite/test_v_db_droptable.py
 +    test()
 Index: scripts/v.db.droptable/v.db.droptable.py
 ===================================================================
---- scripts/v.db.droptable/v.db.droptable.py	(revision 72800)
+--- scripts/v.db.droptable/v.db.droptable.py	(revision 73073)
 +++ scripts/v.db.droptable/v.db.droptable.py	(working copy)
 @@ -91,7 +91,7 @@
  
@@ -2052,7 +2031,7 @@ Index: scripts/v.db.reconnect.all/testsuite/test_v_db_reconnect_all.py
 +    test()
 Index: scripts/v.db.reconnect.all/v.db.reconnect.all.py
 ===================================================================
---- scripts/v.db.reconnect.all/v.db.reconnect.all.py	(revision 72800)
+--- scripts/v.db.reconnect.all/v.db.reconnect.all.py	(revision 73073)
 +++ scripts/v.db.reconnect.all/v.db.reconnect.all.py	(working copy)
 @@ -284,5 +284,5 @@
  
@@ -2161,7 +2140,7 @@ Index: scripts/v.db.univar/testsuite/test_v_db_univar.py
 +    test()
 Index: scripts/v.db.univar/v.db.univar.py
 ===================================================================
---- scripts/v.db.univar/v.db.univar.py	(revision 72800)
+--- scripts/v.db.univar/v.db.univar.py	(revision 73073)
 +++ scripts/v.db.univar/v.db.univar.py	(working copy)
 @@ -101,5 +101,5 @@
  
@@ -2263,7 +2242,7 @@ Index: scripts/v.dissolve/testsuite/test_v_dissolve.py
 +    test()
 Index: scripts/v.dissolve/v.dissolve.py
 ===================================================================
---- scripts/v.dissolve/v.dissolve.py	(revision 72800)
+--- scripts/v.dissolve/v.dissolve.py	(revision 73073)
 +++ scripts/v.dissolve/v.dissolve.py	(working copy)
 @@ -46,7 +46,7 @@
  
@@ -2276,7 +2255,7 @@ Index: scripts/v.dissolve/v.dissolve.py
          (output, tmp), quiet=True, stderr=nuldev)
 Index: scripts/v.in.e00/v.in.e00.py
 ===================================================================
---- scripts/v.in.e00/v.in.e00.py	(revision 72800)
+--- scripts/v.in.e00/v.in.e00.py	(revision 73073)
 +++ scripts/v.in.e00/v.in.e00.py	(working copy)
 @@ -109,14 +109,14 @@
      if merging:
@@ -2354,7 +2333,7 @@ Index: scripts/v.in.lines/testsuite/test_v_in_lines.py
 +    test()
 Index: scripts/v.in.lines/v.in.lines.py
 ===================================================================
---- scripts/v.in.lines/v.in.lines.py	(revision 72800)
+--- scripts/v.in.lines/v.in.lines.py	(revision 73073)
 +++ scripts/v.in.lines/v.in.lines.py	(working copy)
 @@ -77,7 +77,7 @@
  
@@ -2387,7 +2366,7 @@ Index: scripts/v.in.lines/v.in.lines.py
              continue
 Index: scripts/v.in.mapgen/v.in.mapgen.py
 ===================================================================
---- scripts/v.in.mapgen/v.in.mapgen.py	(revision 72800)
+--- scripts/v.in.mapgen/v.in.mapgen.py	(revision 73073)
 +++ scripts/v.in.mapgen/v.in.mapgen.py	(working copy)
 @@ -95,8 +95,8 @@
      tmp = grass.tempfile()
@@ -2429,7 +2408,7 @@ Index: scripts/v.in.mapgen/v.in.mapgen.py
      else:
 Index: scripts/v.in.wfs/v.in.wfs.py
 ===================================================================
---- scripts/v.in.wfs/v.in.wfs.py	(revision 72800)
+--- scripts/v.in.wfs/v.in.wfs.py	(revision 73073)
 +++ scripts/v.in.wfs/v.in.wfs.py	(working copy)
 @@ -136,9 +136,8 @@
      except URLError as e:
@@ -2485,7 +2464,7 @@ Index: scripts/v.pack/testsuite/test_v_pack.py
 +    test()
 Index: scripts/v.rast.stats/v.rast.stats.py
 ===================================================================
---- scripts/v.rast.stats/v.rast.stats.py	(revision 72800)
+--- scripts/v.rast.stats/v.rast.stats.py	(revision 73073)
 +++ scripts/v.rast.stats/v.rast.stats.py	(working copy)
 @@ -72,6 +72,7 @@
  import os
@@ -2504,7 +2483,7 @@ Index: scripts/v.rast.stats/v.rast.stats.py
  
      raster = options['raster']
      colprefix = options['column_prefix']
-@@ -152,6 +153,7 @@
+@@ -161,6 +162,7 @@
      cats = []
  
      for line in p.stdout:
@@ -2629,7 +2608,7 @@ Index: scripts/v.report/testsuite/test_v_report.py
 +    test()
 Index: scripts/v.report/v.report.py
 ===================================================================
---- scripts/v.report/v.report.py	(revision 72800)
+--- scripts/v.report/v.report.py	(revision 73073)
 +++ scripts/v.report/v.report.py	(working copy)
 @@ -46,6 +46,7 @@
  import sys
@@ -2744,7 +2723,7 @@ Index: scripts/v.to.lines/testsuite/test_v_to_lines.py
 +    test()
 Index: scripts/v.to.lines/v.to.lines.py
 ===================================================================
---- scripts/v.to.lines/v.to.lines.py	(revision 72800)
+--- scripts/v.to.lines/v.to.lines.py	(revision 73073)
 +++ scripts/v.to.lines/v.to.lines.py	(working copy)
 @@ -41,6 +41,7 @@
  #%end
@@ -2808,7 +2787,7 @@ Index: scripts/v.unpack/testsuite/test_v_unpack.py
 +    test()
 Index: scripts/v.what.strds/testsuite/test_what_strds.py
 ===================================================================
---- scripts/v.what.strds/testsuite/test_what_strds.py	(revision 72800)
+--- scripts/v.what.strds/testsuite/test_what_strds.py	(revision 73073)
 +++ scripts/v.what.strds/testsuite/test_what_strds.py	(working copy)
 @@ -10,8 +10,10 @@
  """
