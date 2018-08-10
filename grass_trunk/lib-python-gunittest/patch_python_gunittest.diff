@@ -1,6 +1,6 @@
 Index: lib/python/gunittest/case.py
 ===================================================================
---- lib/python/gunittest/case.py	(revision 72791)
+--- lib/python/gunittest/case.py	(revision 73073)
 +++ lib/python/gunittest/case.py	(working copy)
 @@ -20,6 +20,7 @@
  from grass.pygrass.modules import Module
@@ -93,7 +93,7 @@ Index: lib/python/gunittest/case.py
          print(module.outputs.stdout)
 Index: lib/python/gunittest/gutils.py
 ===================================================================
---- lib/python/gunittest/gutils.py	(revision 72791)
+--- lib/python/gunittest/gutils.py	(revision 73073)
 +++ lib/python/gunittest/gutils.py	(working copy)
 @@ -10,6 +10,7 @@
  """

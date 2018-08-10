@@ -1,6 +1,6 @@
 Index: lib/python/pydispatch/dispatcher.py
 ===================================================================
---- lib/python/pydispatch/dispatcher.py	(revision 72951)
+--- lib/python/pydispatch/dispatcher.py	(revision 73073)
 +++ lib/python/pydispatch/dispatcher.py	(working copy)
 @@ -388,7 +388,7 @@
      else:
@@ -13,7 +13,7 @@ Index: lib/python/pydispatch/dispatcher.py
              else:
 Index: lib/python/pydispatch/robustapply.py
 ===================================================================
---- lib/python/pydispatch/robustapply.py	(revision 72951)
+--- lib/python/pydispatch/robustapply.py	(revision 73073)
 +++ lib/python/pydispatch/robustapply.py	(working copy)
 @@ -54,7 +54,7 @@
      if not (codeObject.co_flags & 8):
