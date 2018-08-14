@@ -1,6 +1,8 @@
 # FullSupportPython3
 GSOC 2018 - GRASS GIS - Full support of Python 3 in GRASS GIS
 
+![Project Image](https://raw.githubusercontent.com/sanjeetbhatti/FullSupportPython3/master/GSoC-final-report-project-pic.png)
+
 There are patches in the respective directories in the grass_trunk.
 
 **Patches** | **For**
